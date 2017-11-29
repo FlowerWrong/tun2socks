@@ -16,21 +16,28 @@ type Tunnel struct {
 	socks5Conn net.Conn
 }
 
-func NewTunnel(wq *waiter.Queue, ep tcpip.Endpoint) *Tunnel {
+func NewTunnel(wq *waiter.Queue, ep tcpip.Endpoint, network string) *Tunnel {
 	// connect to socks5
-	network := "tcp"
 	socks5Addr := "127.0.0.1:1090"
-
-	dialer, socks5Err := proxy.SOCKS5(network, socks5Addr, nil, proxy.Direct)
-	if socks5Err != nil {
-		log.Println(socks5Err)
-		return nil
-	}
+	var socks5Conn net.Conn
+	var err error
 	local, _ := ep.GetLocalAddress()
 	targetAddr := fmt.Sprintf("%v:%d", local.Addr.To4(), local.Port)
-	socks5Conn, connErr := dialer.Dial(network, targetAddr)
-	if connErr != nil {
-		log.Println(connErr)
+
+	if network == "tcp" {
+		dialer, socks5Err := proxy.SOCKS5(network, socks5Addr, nil, proxy.Direct)
+		if socks5Err != nil {
+			log.Println(socks5Err)
+			return nil
+		}
+		socks5Conn, err = dialer.Dial(network, targetAddr)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+	} else if network == "udp" {
+	} else {
+		log.Println("no support network", network)
 		return nil
 	}
 
