@@ -16,16 +16,15 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip/network/ipv6"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
+	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/netstack/waiter"
+	"github.com/FlowerWrong/tun2socks/socket"
 	"github.com/FlowerWrong/water"
+	"github.com/yinghuocho/gosocks"
+	"io"
 	"os/exec"
 	"runtime"
-	"github.com/FlowerWrong/tun2socks/socket"
 	"sync"
-	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
-	"io"
-	"github.com/yinghuocho/gosocks"
-	"github.com/FlowerWrong/netstack/tcpip/buffer"
 )
 
 func execCommand(name, sargs string) error {
@@ -35,18 +34,7 @@ func execCommand(name, sargs string) error {
 	return cmd.Run()
 }
 
-func addOSXRoute(tun string, subnet *net.IPNet) error {
-	ip := subnet.IP
-	maskIP := net.IP(subnet.Mask)
-	sargs := fmt.Sprintf("-n add -net %s -netmask %s -interface %s", ip.String(), maskIP.String(), tun)
-	return execCommand("route", sargs)
-}
-
-func addLinuxRoute(tun string, subnet *net.IPNet) error {
-	ip := subnet.IP
-	sargs := fmt.Sprintf("add %s via %s", ip.String(), tun)
-	return execCommand("ip route", sargs)
-}
+var s *stack.Stack
 
 func main() {
 	if len(os.Args) != 3 {
@@ -85,7 +73,7 @@ func main() {
 
 	// Create the stack with ip and tcp protocols, then add a tun-based
 	// NIC and address.
-	s := stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
+	s = stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
 
 	var mtu uint32 = 1500
 
@@ -135,30 +123,27 @@ func main() {
 	})
 
 	var waitGroup sync.WaitGroup
-	//waitGroup.Add(1)
-	//go NewTCPEndpointAndListenIt(s, proto, localPort, waitGroup)
 	waitGroup.Add(1)
+	//go NewTCPEndpointAndListenIt(s, proto, localPort, waitGroup)
+	//waitGroup.Add(1)
 	go NewUDPEndpointAndListenIt(s, proto, localPort, waitGroup)
 	waitGroup.Wait()
 }
 
 const socks5Version = 5
 const (
-	socks5AuthNone     = 0
-	socks5AuthPassword = 2
-)
-
-const socks5Connect = 1
-
-const (
-	socks5IP4    = 1
-	socks5Domain = 3
-	socks5IP6    = 4
+	socks5AuthNone = 0
 )
 
 type UDPPacket struct {
 	Addr *net.UDPAddr
 	Data []byte
+}
+
+// Information maintained for each client/server connection
+type UDPConnection struct {
+	ClientAddr *net.UDPAddr // Address of the client
+	ServerConn *net.UDPConn // UDP connection to server
 }
 
 // Create UDP endpoint, bind it, then start listening.
@@ -170,7 +155,7 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 	}
 	defer ep.Close()
 	defer waitGroup.Done()
-	if err := ep.Bind(tcpip.FullAddress{0, "", uint16(localPort + 1)}, nil); err != nil {
+	if err := ep.Bind(tcpip.FullAddress{0, "", uint16(localPort)}, nil); err != nil {
 		log.Fatal("Bind failed: ", err)
 	}
 
@@ -190,19 +175,20 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 
 			log.Fatal("Read failed:", err)
 		}
-		log.Println(v)
 
 		socks5Addr := "127.0.0.1:1090"
-		targetAddr := fmt.Sprintf("%v:%d", addr.Addr.To4(), addr.Port)
+		targetAddr := fmt.Sprintf("%v:%d", "8.8.8.8", 53)
 		log.Println("targetAddr2", targetAddr)
 
 		host, portStr, e := net.SplitHostPort(targetAddr)
 		if e != nil {
+			log.Println(e)
 			return
 		}
 
 		port, e := strconv.Atoi(portStr)
 		if e != nil {
+			log.Println(e)
 			return
 		}
 		if port < 1 || port > 0xffff {
@@ -217,6 +203,7 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 		c.Write(buf)
 
 		if _, err := io.ReadFull(c, buf[:2]); err != nil {
+			log.Println(err)
 			return
 		}
 		if buf[0] != 5 {
@@ -229,8 +216,8 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 		_, e = gosocks.WriteSocksRequest(c, &gosocks.SocksRequest{
 			Cmd:      gosocks.SocksCmdUDPAssociate,
 			HostType: gosocks.SocksIPv4Host,
-			DstHost:  "0.0.0.0",
-			DstPort:  0,
+			DstHost:  "8.8.8.8",
+			DstPort:  53,
 		})
 		if e != nil {
 			log.Println(e)
@@ -246,49 +233,43 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 
 		log.Println("relayAddr", relayAddr)
 
+		// 127.0.0.1:49558 127.0.0.1:1090
+		log.Println(c.LocalAddr(), c.RemoteAddr())
+
 		socksAddr := c.LocalAddr().(*net.TCPAddr)
 		udpBind, e := net.ListenUDP("udp", &net.UDPAddr{
 			IP:   socksAddr.IP,
 			Port: 0,
 			Zone: socksAddr.Zone,
 		})
-		// read UDP packets from relay
-		go func(u *net.UDPConn, ep tcpip.Endpoint, addr tcpip.FullAddress) {
-			u.SetDeadline(time.Time{})
-			var buf []byte
-			for {
-				_, a, err := u.ReadFromUDP(buf[:])
-				if err != nil {
-					return
-				}
-				pkt := &UDPPacket{a, buf}
-				udpReq, err := gosocks.ParseUDPRequest(pkt.Data)
-				if err != nil {
-					log.Printf("error to parse UDP request from relay: %s", err)
-					continue
-				}
-				if udpReq.Frag != gosocks.SocksNoFragment {
-					continue
-				}
-				ep.Write(buffer.NewViewFromBytes(udpReq.Data), &addr)
-			}
-		}(udpBind, ep, addr)
+		if e != nil {
+			log.Println(e)
+			return
+		}
 
 		req := &gosocks.UDPRequest{
 			Frag:     0,
 			HostType: gosocks.SocksIPv4Host,
-			DstHost:  addr.Addr.To4().String(),
-			DstPort:  uint16(addr.Port),
+			DstHost:  "8.8.8.8",
+			DstPort:  53,
 			Data:     v,
 		}
 		datagram := gosocks.PackUDPRequest(req)
 
-		u, e := net.DialUDP("udp", nil, relayAddr)
-		if e != nil {
-			fmt.Println(e)
+		// relayAddr 127.0.0.1:1090
+		udpBind.WriteTo(datagram, gosocks.SocksAddrToNetAddr("udp", reply.BndHost, reply.BndPort).(*net.UDPAddr))
+
+		var b [4096]byte
+		n, remote_addr, e := udpBind.ReadFromUDP(b[:])
+		fmt.Println("from", remote_addr, "got message:", n)
+		switch {
+		case n != 0:
+			c := make([]byte, n)
+			copy(c, b[:n])
+			ep.Write(c[10:], &addr)
+		case err != nil:
+			log.Fatal(err)
 		}
-		defer u.Close()
-		u.Write(datagram)
 	}
 }
 
