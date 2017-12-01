@@ -16,7 +16,6 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip/network/ipv6"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
-	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/tun2socks/socket"
 	"github.com/FlowerWrong/water"
@@ -27,6 +26,8 @@ import (
 	"os/exec"
 	"runtime"
 	"sync"
+	"github.com/FlowerWrong/tun2socks/socks5"
+	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 )
 
 func execCommand(name, sargs string) error {
@@ -130,22 +131,6 @@ func main() {
 	waitGroup.Wait()
 }
 
-const socks5Version = 5
-const (
-	socks5AuthNone = 0
-)
-
-type UDPPacket struct {
-	Addr *net.UDPAddr
-	Data []byte
-}
-
-// Information maintained for each client/server connection
-type UDPConnection struct {
-	ClientAddr *net.UDPAddr // Address of the client
-	ServerConn *net.UDPConn // UDP connection to server
-}
-
 // Create UDP endpoint, bind it, then start listening.
 func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber, localPort int, waitGroup sync.WaitGroup, ifce *water.Interface) {
 	var wq waiter.Queue
@@ -176,28 +161,19 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 			log.Fatal("Read failed:", err)
 		}
 
+		endpoint := udp.UDPNatList[addr.Port]
+		// TODO check
+		log.Println(endpoint)
+
 		socks5Addr := "127.0.0.1:1090"
-		targetAddr := fmt.Sprintf("%v:%d", "8.8.8.8", 53)
-		log.Println("targetAddr2", targetAddr)
+		remoteHost := endpoint.LocalAddress.To4().String()
+		remotePort := endpoint.LocalPort
+		targetAddr := fmt.Sprintf("%v:%d", remoteHost, remotePort)
+		log.Println("targetAddr", targetAddr)
 
-		host, portStr, e := net.SplitHostPort(targetAddr)
-		if e != nil {
-			log.Println(e)
-			return
-		}
-
-		port, e := strconv.Atoi(portStr)
-		if e != nil {
-			log.Println(e)
-			return
-		}
-		if port < 1 || port > 0xffff {
-			return
-		}
-
-		buf := make([]byte, 0, 6+len(host))
-		buf = append(buf, socks5Version)
-		buf = append(buf, 1 /* num auth methods */ , socks5AuthNone)
+		buf := make([]byte, 0, 6+len(remoteHost))
+		buf = append(buf, socks5.Socks5Version)
+		buf = append(buf, 1 /* num auth methods */ , socks5.Socks5AuthNone)
 
 		c, e := net.Dial("tcp", socks5Addr)
 		c.Write(buf)
@@ -216,8 +192,8 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 		_, e = gosocks.WriteSocksRequest(c, &gosocks.SocksRequest{
 			Cmd:      gosocks.SocksCmdUDPAssociate,
 			HostType: gosocks.SocksIPv4Host,
-			DstHost:  "8.8.8.8",
-			DstPort:  53,
+			DstHost:  remoteHost,
+			DstPort:  remotePort,
 		})
 		if e != nil {
 			log.Println(e)
@@ -230,17 +206,13 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 			return
 		}
 		relayAddr := gosocks.SocksAddrToNetAddr("udp", reply.BndHost, reply.BndPort).(*net.UDPAddr)
-
 		log.Println("relayAddr", relayAddr)
 
-		// 127.0.0.1:49558 127.0.0.1:1090
-		log.Println(c.LocalAddr(), c.RemoteAddr())
-
-		socksAddr := c.LocalAddr().(*net.TCPAddr)
+		udpSocksAddr := c.LocalAddr().(*net.TCPAddr)
 		udpBind, e := net.ListenUDP("udp", &net.UDPAddr{
-			IP:   socksAddr.IP,
+			IP:   udpSocksAddr.IP,
 			Port: 0,
-			Zone: socksAddr.Zone,
+			Zone: udpSocksAddr.Zone,
 		})
 		if e != nil {
 			log.Println(e)
@@ -250,29 +222,24 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 		req := &gosocks.UDPRequest{
 			Frag:     0,
 			HostType: gosocks.SocksIPv4Host,
-			DstHost:  "8.8.8.8",
-			DstPort:  53,
+			DstHost:  remoteHost,
+			DstPort:  remotePort,
 			Data:     v,
 		}
-		datagram := gosocks.PackUDPRequest(req)
-
-		// relayAddr 127.0.0.1:1090
-		udpBind.WriteTo(datagram, gosocks.SocksAddrToNetAddr("udp", reply.BndHost, reply.BndPort).(*net.UDPAddr))
+		udpBind.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", reply.BndHost, reply.BndPort).(*net.UDPAddr))
 
 		var b [4096]byte
-		n, remote_addr, e := udpBind.ReadFromUDP(b[:])
-		fmt.Println("from", remote_addr, "got message:", n)
+		n, remoteAddr, e := udpBind.ReadFromUDP(b[:])
+		fmt.Println("from", remoteAddr, "got", n, "bytes message")
 		switch {
 		case n != 0:
 			c := make([]byte, n)
 			copy(c, b[:n])
-			// ep.Write(c[10:], &addr)
-			log.Println(net.ParseIP("8.8.8.8"))
-			log.Println(net.ParseIP(addr.Addr.To4().String()))
-			p := createDNSResponse(net.ParseIP("8.8.8.8"), uint16(53), net.ParseIP(addr.Addr.To4().String()), addr.Port, c[10:])
-			log.Println(p)
+			p := createDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(addr.Addr.To4().String()), addr.Port, c[10:])
 			m, r := ifce.Write(p)
-			log.Println(m)
+			if m <= 0 {
+				log.Println("write udp to tun interface failed", p)
+			}
 			if r != nil {
 				log.Println(r)
 			}
