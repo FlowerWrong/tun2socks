@@ -1,4 +1,4 @@
-package socket
+package tunnel
 
 import (
 	"net"
@@ -10,22 +10,21 @@ import (
 	"fmt"
 )
 
-type Tunnel struct {
+type TcpTunnel struct {
 	wq         *waiter.Queue
 	ep         tcpip.Endpoint
 	socks5Conn net.Conn
 }
 
-func NewTunnel(wq *waiter.Queue, ep tcpip.Endpoint, network string) *Tunnel {
+func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) *TcpTunnel {
 	// connect to socks5
-	socks5Addr := "127.0.0.1:1090"
 	var socks5Conn net.Conn
 	var err error
 	local, _ := ep.GetLocalAddress()
 	targetAddr := fmt.Sprintf("%v:%d", local.Addr.To4(), local.Port)
 
 	if network == "tcp" {
-		dialer, socks5Err := proxy.SOCKS5(network, socks5Addr, nil, proxy.Direct)
+		dialer, socks5Err := proxy.SOCKS5(network, Socks5Addr, nil, proxy.Direct)
 		if socks5Err != nil {
 			log.Println(socks5Err)
 			return nil
@@ -41,25 +40,25 @@ func NewTunnel(wq *waiter.Queue, ep tcpip.Endpoint, network string) *Tunnel {
 		return nil
 	}
 
-	return &Tunnel{
+	return &TcpTunnel{
 		wq,
 		ep,
 		socks5Conn,
 	}
 }
 
-func (tunnel *Tunnel) ReadFromLocalWriteToRemote() {
-	defer tunnel.ep.Close()
-	defer tunnel.socks5Conn.Close()
+func (tcpTunnel *TcpTunnel) ReadFromLocalWriteToRemote() {
+	defer tcpTunnel.ep.Close()
+	defer tcpTunnel.socks5Conn.Close()
 
 	// Create wait queue entry that notifies a channel.
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 
-	tunnel.wq.EventRegister(&waitEntry, waiter.EventIn)
-	defer tunnel.wq.EventUnregister(&waitEntry)
+	tcpTunnel.wq.EventRegister(&waitEntry, waiter.EventIn)
+	defer tcpTunnel.wq.EventUnregister(&waitEntry)
 
 	for {
-		v, err := tunnel.ep.Read(nil)
+		v, err := tcpTunnel.ep.Read(nil)
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {
 				<-notifyCh
@@ -69,19 +68,19 @@ func (tunnel *Tunnel) ReadFromLocalWriteToRemote() {
 			return
 		}
 
-		go tunnel.ReadFromRemoteWriteToLocal()
-		tunnel.socks5Conn.Write(v)
+		go tcpTunnel.ReadFromRemoteWriteToLocal()
+		tcpTunnel.socks5Conn.Write(v)
 	}
 }
 
-func (tunnel *Tunnel) ReadFromRemoteWriteToLocal() {
-	defer tunnel.ep.Close()
-	defer tunnel.socks5Conn.Close()
+func (tcpTunnel *TcpTunnel) ReadFromRemoteWriteToLocal() {
+	defer tcpTunnel.ep.Close()
+	defer tcpTunnel.socks5Conn.Close()
 
 	buf := make([]byte, 1500)
 
 	for {
-		_, err := tunnel.socks5Conn.Read(buf)
+		_, err := tcpTunnel.socks5Conn.Read(buf)
 		if err != nil {
 			if err == io.EOF {
 				log.Println("read eof from remote")
@@ -92,6 +91,6 @@ func (tunnel *Tunnel) ReadFromRemoteWriteToLocal() {
 			return
 		}
 
-		tunnel.ep.Write(buf, nil)
+		tcpTunnel.ep.Write(buf, nil)
 	}
 }

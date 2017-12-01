@@ -16,18 +16,13 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip/network/ipv6"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
+	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/netstack/waiter"
-	"github.com/FlowerWrong/tun2socks/socket"
+	"github.com/FlowerWrong/tun2socks/tunnel"
 	"github.com/FlowerWrong/water"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/yinghuocho/gosocks"
-	"io"
 	"os/exec"
 	"runtime"
 	"sync"
-	"github.com/FlowerWrong/tun2socks/socks5"
-	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 )
 
 func execCommand(name, sargs string) error {
@@ -38,12 +33,13 @@ func execCommand(name, sargs string) error {
 }
 
 func main() {
-	if len(os.Args) != 3 {
-		log.Fatal("Usage: ", os.Args[0], " <local-address> <local-port>")
+	if len(os.Args) != 5 {
+		log.Fatal("Usage: ", os.Args[0], " <local-address> <local-port> <socks5-address> <socks5-port>")
 	}
 
 	addrName := os.Args[1]
 	portName := os.Args[2]
+	tunnel.Socks5Addr = os.Args[3] + ":" + os.Args[4]
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -150,102 +146,20 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 	defer wq.EventUnregister(&waitEntry)
 
 	for {
-		var addr tcpip.FullAddress
-		v, err := ep.Read(&addr)
+		var localAddr tcpip.FullAddress
+		v, err := ep.Read(&localAddr)
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {
 				<-notifyCh
 				continue
 			}
-
 			log.Fatal("Read failed:", err)
 		}
 
-		endpoint := udp.UDPNatList[addr.Port]
-		// TODO check
-		log.Println(endpoint)
+		log.Println("There are", len(udp.UDPNatList), "UDP connections")
 
-		socks5Addr := "127.0.0.1:1090"
-		remoteHost := endpoint.LocalAddress.To4().String()
-		remotePort := endpoint.LocalPort
-		targetAddr := fmt.Sprintf("%v:%d", remoteHost, remotePort)
-		log.Println("targetAddr", targetAddr)
-
-		buf := make([]byte, 0, 6+len(remoteHost))
-		buf = append(buf, socks5.Socks5Version)
-		buf = append(buf, 1 /* num auth methods */ , socks5.Socks5AuthNone)
-
-		c, e := net.Dial("tcp", socks5Addr)
-		c.Write(buf)
-
-		if _, err := io.ReadFull(c, buf[:2]); err != nil {
-			log.Println(err)
-			return
-		}
-		if buf[0] != 5 {
-			return
-		}
-		if buf[1] == 0xff {
-			return
-		}
-
-		_, e = gosocks.WriteSocksRequest(c, &gosocks.SocksRequest{
-			Cmd:      gosocks.SocksCmdUDPAssociate,
-			HostType: gosocks.SocksIPv4Host,
-			DstHost:  remoteHost,
-			DstPort:  remotePort,
-		})
-		if e != nil {
-			log.Println(e)
-			return
-		}
-
-		reply, e := gosocks.ReadSocksReply(c)
-		if e != nil {
-			log.Println(e)
-			return
-		}
-		relayAddr := gosocks.SocksAddrToNetAddr("udp", reply.BndHost, reply.BndPort).(*net.UDPAddr)
-		log.Println("relayAddr", relayAddr)
-
-		udpSocksAddr := c.LocalAddr().(*net.TCPAddr)
-		udpBind, e := net.ListenUDP("udp", &net.UDPAddr{
-			IP:   udpSocksAddr.IP,
-			Port: 0,
-			Zone: udpSocksAddr.Zone,
-		})
-		if e != nil {
-			log.Println(e)
-			return
-		}
-
-		req := &gosocks.UDPRequest{
-			Frag:     0,
-			HostType: gosocks.SocksIPv4Host,
-			DstHost:  remoteHost,
-			DstPort:  remotePort,
-			Data:     v,
-		}
-		udpBind.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", reply.BndHost, reply.BndPort).(*net.UDPAddr))
-
-		var b [4096]byte
-		n, remoteAddr, e := udpBind.ReadFromUDP(b[:])
-		fmt.Println("from", remoteAddr, "got", n, "bytes message")
-		switch {
-		case n != 0:
-			c := make([]byte, n)
-			copy(c, b[:n])
-			p := createDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(addr.Addr.To4().String()), addr.Port, c[10:])
-			m, r := ifce.Write(p)
-			if m <= 0 {
-				log.Println("write udp to tun interface failed", p)
-			}
-			if r != nil {
-				log.Println(r)
-			}
-		case err != nil:
-			log.Fatal(err)
-		}
+		endpoint := udp.UDPNatList[localAddr.Port]
+		go tunnel.NewUDP2Socks5(endpoint, localAddr, v, ifce)
 	}
 }
 
@@ -282,32 +196,6 @@ func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 			log.Fatal("Accept() failed:", err)
 		}
 
-		go socket.NewTunnel(wq, n, "tcp").ReadFromLocalWriteToRemote()
+		go tunnel.NewTCP2Socks(wq, n, "tcp").ReadFromLocalWriteToRemote()
 	}
-}
-
-func createDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint16, pkt []byte) []byte {
-	ip := &layers.IPv4{
-		SrcIP:    SrcIP,
-		DstIP:    DstIP,
-		Protocol: layers.IPProtocolUDP,
-		Version:  uint8(4),
-		IHL:      uint8(5),
-		TTL:      uint8(64),
-	}
-	udp := &layers.UDP{SrcPort: layers.UDPPort(SrcPort), DstPort: layers.UDPPort(DstPort)}
-	if err := udp.SetNetworkLayerForChecksum(ip); err != nil {
-		log.Println(err)
-		return nil
-	}
-	buf := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
-	gopacket.SerializeLayers(buf, opts,
-		ip,
-		udp,
-		gopacket.Payload(pkt),
-	)
-
-	packetData := buf.Bytes()
-	return packetData
 }
