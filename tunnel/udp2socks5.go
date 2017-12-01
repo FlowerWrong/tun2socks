@@ -1,8 +1,9 @@
 package tunnel
 
 import (
+	"context"
+	"errors"
 	"github.com/FlowerWrong/netstack/tcpip"
-	"github.com/FlowerWrong/netstack/tcpip/buffer"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/water"
@@ -14,27 +15,30 @@ import (
 )
 
 type UdpTunnel struct {
-	endpoint        stack.TransportEndpointID
-	socks5TcpConn   *gosocks.SocksConn
-	udpSocks5Listen *net.UDPConn
+	endpoint             stack.TransportEndpointID
+	socks5TcpConn        *gosocks.SocksConn
+	udpSocks5Listen      *net.UDPConn
+	RemotePackets        chan []byte // write to local
+	LocalPackets         chan []byte // write to remote, socks5
+	ctx                  context.Context
+	ctxCancel            context.CancelFunc
+	localAddr            tcpip.FullAddress
+	ifce                 *water.Interface
+	cmdUDPAssociateReply *gosocks.SocksReply
 }
 
-func NewUDP2Socks5(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, view buffer.View, ifce *water.Interface) {
-	remoteHost := endpoint.LocalAddress.To4().String()
-	remotePort := endpoint.LocalPort
-
+func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, ifce *water.Interface) (*UdpTunnel, error) {
 	localTcpSocks5Dialer := &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
-		Timeout: DefaultConnectTimeout,
+		Timeout: DefaultConnectDuration,
 	}
 	socks5TcpConn, err := localTcpSocks5Dialer.Dial(Socks5Addr)
 	if err != nil {
 		log.Println("Fail to connect SOCKS proxy ", err)
-		return
+		return nil, err
 	}
-	defer socks5TcpConn.Close()
-	socks5TcpConn.SetDeadline(DefaultReadWriteTimeout)
 
+	socks5TcpConn.SetWriteDeadline(DefaultReadWriteTimeout)
 	_, err = gosocks.WriteSocksRequest(socks5TcpConn, &gosocks.SocksRequest{
 		Cmd:      gosocks.SocksCmdUDPAssociate,
 		HostType: gosocks.SocksIPv4Host,
@@ -43,13 +47,15 @@ func NewUDP2Socks5(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddre
 	})
 	if err != nil {
 		log.Println("WriteSocksRequest failed", err)
-		return
+		socks5TcpConn.Close()
+		return nil, err
 	}
-	cmdUDPAssociateReply, e := gosocks.ReadSocksReply(socks5TcpConn)
-	log.Println("cmdUDPAssociateReply", cmdUDPAssociateReply)
-	if e != nil {
-		log.Println("ReadSocksReply failed", e)
-		return
+	socks5TcpConn.SetReadDeadline(DefaultReadWriteTimeout)
+	cmdUDPAssociateReply, err := gosocks.ReadSocksReply(socks5TcpConn)
+	if err != nil {
+		log.Println("ReadSocksReply failed", err)
+		socks5TcpConn.Close()
+		return nil, err
 	}
 	socks5TcpConn.SetDeadline(WithoutTimeout)
 
@@ -61,40 +67,112 @@ func NewUDP2Socks5(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddre
 	})
 	if err != nil {
 		log.Println("ListenUDP falied", err)
-		return
+		socks5TcpConn.Close()
+		return nil, err
 	}
-	defer udpSocks5Listen.Close()
-	udpSocks5Listen.SetDeadline(DefaultReadWriteTimeout)
+	return &UdpTunnel{
+		endpoint:             endpoint,
+		socks5TcpConn:        socks5TcpConn,
+		udpSocks5Listen:      udpSocks5Listen,
+		RemotePackets:        make(chan []byte, 1500),
+		LocalPackets:         make(chan []byte, 1500),
+		localAddr:            localAddr,
+		ifce:                 ifce,
+		cmdUDPAssociateReply: cmdUDPAssociateReply,
+	}, nil
+}
 
-	req := &gosocks.UDPRequest{
-		Frag:     0,
-		HostType: gosocks.SocksIPv4Host,
-		DstHost:  remoteHost,
-		DstPort:  remotePort,
-		Data:     view,
-	}
-	n, err := udpSocks5Listen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", cmdUDPAssociateReply.BndHost, cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
-	if err != nil {
-		log.Println("WriteTo UDP tunnel failed", err)
-		return
-	}
+func (udpTunnel *UdpTunnel) Run() {
+	udpTunnel.ctx, udpTunnel.ctxCancel = context.WithCancel(context.Background())
+	go udpTunnel.writeToLocal()
+	go udpTunnel.readFromRemote()
+	go udpTunnel.writeToRemote()
+}
 
-	var udpSocks5Buf [4096]byte
-	n, _, err = udpSocks5Listen.ReadFromUDP(udpSocks5Buf[:])
-
-	if n > 0 {
-		udpBuf := make([]byte, n)
-		copy(udpBuf, udpSocks5Buf[:n])
-		dnsPkt := createDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(localAddr.Addr.To4().String()), localAddr.Port, udpBuf[10:])
-		_, err := ifce.Write(dnsPkt)
-		if err != nil {
-			log.Println("Write to tun failed", err)
+func (udpTunnel *UdpTunnel) writeToRemote() {
+WriteToRemote:
+	for {
+		select {
+		case <-udpTunnel.ctx.Done():
+			log.Printf("WriteToRemote done because of '%s'", udpTunnel.ctx.Err())
+			break WriteToRemote
+		case chunk := <-udpTunnel.LocalPackets:
+			remoteHost := udpTunnel.endpoint.LocalAddress.To4().String()
+			remotePort := udpTunnel.endpoint.LocalPort
+			req := &gosocks.UDPRequest{
+				Frag:     0,
+				HostType: gosocks.SocksIPv4Host,
+				DstHost:  remoteHost,
+				DstPort:  remotePort,
+				Data:     chunk,
+			}
+			_, err := udpTunnel.udpSocks5Listen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
+			if err != nil {
+				log.Println("WriteTo UDP tunnel failed", err)
+				udpTunnel.Close(err)
+				break WriteToRemote
+			}
 		}
-		udp.UDPNatList.DelUDPNat(localAddr.Port)
 	}
-	if err != nil {
-		log.Println("ReadFromUDP tunnel failed", err)
+}
+
+func (udpTunnel *UdpTunnel) readFromRemote() {
+ReadFromRemote:
+	for {
+		select {
+		case <-udpTunnel.ctx.Done():
+			log.Printf("ReadFromRemote done because of '%s'", udpTunnel.ctx.Err())
+			break ReadFromRemote
+		default:
+			var udpSocks5Buf [4096]byte
+			udpTunnel.udpSocks5Listen.SetReadDeadline(DefaultReadWriteTimeout)
+			n, _, err := udpTunnel.udpSocks5Listen.ReadFromUDP(udpSocks5Buf[:])
+			if n > 0 {
+				udpBuf := make([]byte, n)
+				copy(udpBuf, udpSocks5Buf[:n])
+				udpTunnel.RemotePackets <- udpBuf[10:]
+			}
+			if err != nil {
+				log.Println("ReadFromUDP tunnel failed", err)
+				udpTunnel.Close(err)
+				break ReadFromRemote
+			}
+		}
 	}
+}
+
+func (udpTunnel *UdpTunnel) writeToLocal() {
+WriteToLocal:
+	for {
+		select {
+		case <-udpTunnel.ctx.Done():
+			log.Printf("WriteToRemote done because of '%s'", udpTunnel.ctx.Err())
+			break WriteToLocal
+		case chunk := <-udpTunnel.RemotePackets:
+			remoteHost := udpTunnel.endpoint.LocalAddress.To4().String()
+			remotePort := udpTunnel.endpoint.LocalPort
+			dnsPkt := createDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, chunk)
+			_, err := udpTunnel.ifce.Write(dnsPkt)
+			if err != nil {
+				log.Println("Write to tun failed", err)
+			}
+			if err != nil {
+				log.Println(err)
+				udpTunnel.Close(err)
+				break WriteToLocal
+			}
+			udpTunnel.Close(errors.New("OK"))
+		}
+	}
+}
+
+func (udpTunnel *UdpTunnel) Close(reason error) {
+	log.Println("Close UDP tunnel because", reason.Error())
+	udpTunnel.ctxCancel()
+	udp.UDPNatList.DelUDPNat(udpTunnel.localAddr.Port)
+	udpTunnel.socks5TcpConn.Close()
+	udpTunnel.udpSocks5Listen.Close()
+	return
 }
 
 func createDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint16, pkt []byte) []byte {

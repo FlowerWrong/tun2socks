@@ -155,7 +155,14 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 		log.Println("There are", len(udp.UDPNatList.Data), "UDP connections")
 
 		endpoint := udp.UDPNatList.GetUDPNat(localAddr.Port)
-		go tunnel.NewUDP2Socks5(endpoint, localAddr, v, ifce)
+		udpTunnel, e := tunnel.NewUdpTunnel(endpoint, localAddr, ifce)
+		if e != nil {
+			log.Println("NewUdpTunnel failed", e)
+			udp.UDPNatList.DelUDPNat(localAddr.Port)
+			continue
+		}
+		go udpTunnel.Run()
+		udpTunnel.LocalPackets <- v
 	}
 }
 
@@ -182,7 +189,7 @@ func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 	defer wq.EventUnregister(&waitEntry)
 
 	for {
-		n, wq, err := ep.Accept()
+		endpoint, wq, err := ep.Accept()
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {
 				<-notifyCh
@@ -192,6 +199,13 @@ func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 			log.Println("Accept failed:", err)
 		}
 
-		go tunnel.NewTCP2Socks(wq, n, "tcp").ReadFromLocalWriteToRemote()
+		tcpTunnel, e := tunnel.NewTCP2Socks(wq, endpoint, "tcp")
+		if e != nil {
+			log.Println("NewTCP2Socks tunnel failed", e, tcpTunnel)
+			endpoint.Close()
+			continue
+		}
+
+		go tcpTunnel.Run()
 	}
 }
