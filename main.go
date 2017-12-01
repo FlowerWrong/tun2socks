@@ -20,6 +20,8 @@ import (
 	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/tun2socks/socket"
 	"github.com/FlowerWrong/water"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/yinghuocho/gosocks"
 	"io"
 	"os/exec"
@@ -33,8 +35,6 @@ func execCommand(name, sargs string) error {
 	log.Println("exec command: %s %s", name, sargs)
 	return cmd.Run()
 }
-
-var s *stack.Stack
 
 func main() {
 	if len(os.Args) != 3 {
@@ -73,7 +73,7 @@ func main() {
 
 	// Create the stack with ip and tcp protocols, then add a tun-based
 	// NIC and address.
-	s = stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
+	s := stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
 
 	var mtu uint32 = 1500
 
@@ -87,7 +87,7 @@ func main() {
 	log.Printf("Interface Name: %s\n", ifce.Name())
 
 	if runtime.GOOS == "darwin" {
-		sargs := fmt.Sprintf("%s 10.0.0.1 10.0.0.2 mtu %d netmask 255.255.255.0 up", ifce.Name(), mtu)
+		sargs := fmt.Sprintf("%s 10.0.0.1 %s mtu %d netmask 255.255.255.0 up", ifce.Name(), addrName, mtu)
 		if err := execCommand("/sbin/ifconfig", sargs); err != nil {
 			log.Println(err)
 			return
@@ -124,9 +124,9 @@ func main() {
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
-	//go NewTCPEndpointAndListenIt(s, proto, localPort, waitGroup)
-	//waitGroup.Add(1)
-	go NewUDPEndpointAndListenIt(s, proto, localPort, waitGroup)
+	go NewTCPEndpointAndListenIt(s, proto, localPort, waitGroup)
+	waitGroup.Add(1)
+	go NewUDPEndpointAndListenIt(s, proto, localPort, waitGroup, ifce)
 	waitGroup.Wait()
 }
 
@@ -147,7 +147,7 @@ type UDPConnection struct {
 }
 
 // Create UDP endpoint, bind it, then start listening.
-func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber, localPort int, waitGroup sync.WaitGroup) {
+func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber, localPort int, waitGroup sync.WaitGroup, ifce *water.Interface) {
 	var wq waiter.Queue
 	ep, e := s.NewEndpoint(udp.ProtocolNumber, proto, &wq)
 	if e != nil {
@@ -266,7 +266,16 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 		case n != 0:
 			c := make([]byte, n)
 			copy(c, b[:n])
-			ep.Write(c[10:], &addr)
+			// ep.Write(c[10:], &addr)
+			log.Println(net.ParseIP("8.8.8.8"))
+			log.Println(net.ParseIP(addr.Addr.To4().String()))
+			p := createDNSResponse(net.ParseIP("8.8.8.8"), uint16(53), net.ParseIP(addr.Addr.To4().String()), addr.Port, c[10:])
+			log.Println(p)
+			m, r := ifce.Write(p)
+			log.Println(m)
+			if r != nil {
+				log.Println(r)
+			}
 		case err != nil:
 			log.Fatal(err)
 		}
@@ -308,4 +317,30 @@ func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 
 		go socket.NewTunnel(wq, n, "tcp").ReadFromLocalWriteToRemote()
 	}
+}
+
+func createDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint16, pkt []byte) []byte {
+	ip := &layers.IPv4{
+		SrcIP:    SrcIP,
+		DstIP:    DstIP,
+		Protocol: layers.IPProtocolUDP,
+		Version:  uint8(4),
+		IHL:      uint8(5),
+		TTL:      uint8(64),
+	}
+	udp := &layers.UDP{SrcPort: layers.UDPPort(SrcPort), DstPort: layers.UDPPort(DstPort)}
+	if err := udp.SetNetworkLayerForChecksum(ip); err != nil {
+		log.Println(err)
+		return nil
+	}
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+	gopacket.SerializeLayers(buf, opts,
+		ip,
+		udp,
+		gopacket.Payload(pkt),
+	)
+
+	packetData := buf.Bytes()
+	return packetData
 }
