@@ -26,17 +26,17 @@ func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) *TcpTunne
 	if network == "tcp" {
 		dialer, socks5Err := proxy.SOCKS5(network, Socks5Addr, nil, proxy.Direct)
 		if socks5Err != nil {
-			log.Println(socks5Err)
+			log.Println("Create SOCKS5 failed", socks5Err)
 			return nil
 		}
 		socks5Conn, err = dialer.Dial(network, targetAddr)
 		if err != nil {
-			log.Println(err)
+			log.Println("Connect to remote via socks5 failed", err)
 			return nil
 		}
-	} else if network == "udp" {
+		socks5Conn.SetDeadline(DefaultReadWriteTimeout)
 	} else {
-		log.Println("no support network", network)
+		log.Println("No support network", network)
 		return nil
 	}
 
@@ -64,7 +64,7 @@ func (tcpTunnel *TcpTunnel) ReadFromLocalWriteToRemote() {
 				<-notifyCh
 				continue
 			}
-
+			log.Println("ReadFromLocalWriteToRemote failed", err)
 			return
 		}
 
@@ -87,7 +87,7 @@ func (tcpTunnel *TcpTunnel) ReadFromRemoteWriteToLocal() {
 				return
 			}
 
-			log.Println(err) // use of closed network connection
+			log.Println("ReadFromRemoteWriteToLocal failed", err) // FIXME use of closed network connection
 			return
 		}
 

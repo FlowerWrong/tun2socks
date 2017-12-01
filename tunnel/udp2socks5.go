@@ -11,7 +11,6 @@ import (
 	"github.com/yinghuocho/gosocks"
 	"log"
 	"net"
-	"time"
 )
 
 type UdpTunnel struct {
@@ -26,35 +25,33 @@ func NewUDP2Socks5(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddre
 
 	localTcpSocks5Dialer := &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
-		Timeout: 1 * time.Second,
+		Timeout: DefaultConnectTimeout,
 	}
 	socks5TcpConn, err := localTcpSocks5Dialer.Dial(Socks5Addr)
 	if err != nil {
-		log.Println("fail to connect SOCKS proxy ", err)
+		log.Println("Fail to connect SOCKS proxy ", err)
 		return
-	} else {
-		// need to finish handshake in 1 mins
-		socks5TcpConn.SetDeadline(time.Now().Add(time.Minute * 1))
 	}
+	defer socks5TcpConn.Close()
+	socks5TcpConn.SetDeadline(DefaultReadWriteTimeout)
 
 	_, err = gosocks.WriteSocksRequest(socks5TcpConn, &gosocks.SocksRequest{
 		Cmd:      gosocks.SocksCmdUDPAssociate,
 		HostType: gosocks.SocksIPv4Host,
-		DstHost:  remoteHost,
-		DstPort:  remotePort,
+		DstHost:  "0.0.0.0",
+		DstPort:  0,
 	})
 	if err != nil {
 		log.Println("WriteSocksRequest failed", err)
-		socks5TcpConn.Close()
 		return
 	}
 	cmdUDPAssociateReply, e := gosocks.ReadSocksReply(socks5TcpConn)
+	log.Println("cmdUDPAssociateReply", cmdUDPAssociateReply)
 	if e != nil {
-		log.Println(e)
-		socks5TcpConn.Close()
+		log.Println("ReadSocksReply failed", e)
 		return
 	}
-	socks5TcpConn.SetDeadline(time.Time{})
+	socks5TcpConn.SetDeadline(WithoutTimeout)
 
 	udpSocks5Addr := socks5TcpConn.LocalAddr().(*net.TCPAddr)
 	udpSocks5Listen, err := net.ListenUDP("udp", &net.UDPAddr{
@@ -64,10 +61,10 @@ func NewUDP2Socks5(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddre
 	})
 	if err != nil {
 		log.Println("ListenUDP falied", err)
-		socks5TcpConn.Close()
 		return
 	}
-	udpSocks5Listen.SetDeadline(time.Now().Add(time.Minute * 1))
+	defer udpSocks5Listen.Close()
+	udpSocks5Listen.SetDeadline(DefaultReadWriteTimeout)
 
 	req := &gosocks.UDPRequest{
 		Frag:     0,
@@ -79,16 +76,13 @@ func NewUDP2Socks5(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddre
 	n, err := udpSocks5Listen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", cmdUDPAssociateReply.BndHost, cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
 	if err != nil {
 		log.Println("WriteTo UDP tunnel failed", err)
-		socks5TcpConn.Close()
-		udpSocks5Listen.Close()
 		return
 	}
 
 	var udpSocks5Buf [4096]byte
-	n, remoteAddr, err := udpSocks5Listen.ReadFromUDP(udpSocks5Buf[:])
-	log.Println("from", remoteAddr, "got", n, "bytes message")
-	switch {
-	case n != 0:
+	n, _, err = udpSocks5Listen.ReadFromUDP(udpSocks5Buf[:])
+
+	if n > 0 {
 		udpBuf := make([]byte, n)
 		copy(udpBuf, udpSocks5Buf[:n])
 		dnsPkt := createDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(localAddr.Addr.To4().String()), localAddr.Port, udpBuf[10:])
@@ -96,13 +90,10 @@ func NewUDP2Socks5(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddre
 		if err != nil {
 			log.Println("Write to tun failed", err)
 		}
-		delete(udp.UDPNatList, localAddr.Port)
-		socks5TcpConn.Close()
-		udpSocks5Listen.Close()
-	case err != nil:
+		udp.UDPNatList.DelUDPNat(localAddr.Port)
+	}
+	if err != nil {
 		log.Println("ReadFromUDP tunnel failed", err)
-		socks5TcpConn.Close()
-		udpSocks5Listen.Close()
 	}
 }
 
@@ -117,7 +108,7 @@ func createDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint1
 	}
 	udp := &layers.UDP{SrcPort: layers.UDPPort(SrcPort), DstPort: layers.UDPPort(DstPort)}
 	if err := udp.SetNetworkLayerForChecksum(ip); err != nil {
-		log.Println(err)
+		log.Println("SetNetworkLayerForChecksum failed", err)
 		return nil
 	}
 	buf := gopacket.NewSerializeBuffer()

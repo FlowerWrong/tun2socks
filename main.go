@@ -43,6 +43,7 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 
+	// log with file and line number
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	// Parse the IP address. Support both ipv4 and ipv6.
@@ -68,8 +69,7 @@ func main() {
 		log.Fatalf("Unable to convert port %v: %v", portName, err)
 	}
 
-	// Create the stack with ip and tcp protocols, then add a tun-based
-	// NIC and address.
+	// Create the stack with ip and tcp protocols, then add a tun-based NIC and address.
 	s := stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
 
 	var mtu uint32 = 1500
@@ -78,35 +78,31 @@ func main() {
 		DeviceType: water.TUN,
 	})
 	if err != nil {
-		log.Fatal(err)
-		return
+		log.Fatal("Create tun interface failed", err)
 	}
 	log.Printf("Interface Name: %s\n", ifce.Name())
 
 	if runtime.GOOS == "darwin" {
 		sargs := fmt.Sprintf("%s 10.0.0.1 %s mtu %d netmask 255.255.255.0 up", ifce.Name(), addrName, mtu)
 		if err := execCommand("/sbin/ifconfig", sargs); err != nil {
-			log.Println(err)
-			return
+			log.Fatal("execCommand failed", err)
 		}
 	} else if runtime.GOOS == "linux" {
 		sargs := fmt.Sprintf("%s 10.0.0.1 netmask 255.255.255.0", ifce.Name())
 		if err := execCommand("/sbin/ifconfig", sargs); err != nil {
-			log.Println(err)
-			return
+			log.Fatal("execCommand failed", err)
 		}
 	} else {
-		log.Println("not support os")
-		return
+		log.Fatal("Not support os")
 	}
 
 	linkID := fdbased.New(ifce, fd, mtu, nil)
 	if err := s.CreateNIC(1, linkID, true, addr, uint16(localPort)); err != nil {
-		log.Fatal(err)
+		log.Fatal("Create NIC failed", err)
 	}
 
 	if err := s.AddAddress(1, proto, addr); err != nil {
-		log.Fatal(err)
+		log.Fatal("Add address failed", err)
 	}
 
 	// Add default route.
@@ -132,7 +128,7 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 	var wq waiter.Queue
 	ep, e := s.NewEndpoint(udp.ProtocolNumber, proto, &wq)
 	if e != nil {
-		log.Fatal(e)
+		log.Fatal("New UDP Endpoint failed", e)
 	}
 	defer ep.Close()
 	defer waitGroup.Done()
@@ -153,12 +149,12 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 				<-notifyCh
 				continue
 			}
-			log.Fatal("Read failed:", err)
+			log.Println("Read failed:", err)
 		}
 
-		log.Println("There are", len(udp.UDPNatList), "UDP connections")
+		log.Println("There are", len(udp.UDPNatList.Data), "UDP connections")
 
-		endpoint := udp.UDPNatList[localAddr.Port]
+		endpoint := udp.UDPNatList.GetUDPNat(localAddr.Port)
 		go tunnel.NewUDP2Socks5(endpoint, localAddr, v, ifce)
 	}
 }
@@ -168,7 +164,7 @@ func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 	var wq waiter.Queue
 	ep, err := s.NewEndpoint(tcp.ProtocolNumber, proto, &wq)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("New TCP Endpoint failed", err)
 	}
 
 	defer ep.Close()
@@ -193,7 +189,7 @@ func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 				continue
 			}
 
-			log.Fatal("Accept() failed:", err)
+			log.Println("Accept failed:", err)
 		}
 
 		go tunnel.NewTCP2Socks(wq, n, "tcp").ReadFromLocalWriteToRemote()
