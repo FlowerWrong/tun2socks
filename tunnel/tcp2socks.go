@@ -17,13 +17,13 @@ type TcpTunnel struct {
 	wq            *waiter.Queue
 	ep            tcpip.Endpoint
 	socks5Conn    net.Conn
-	RemotePackets chan []byte // write to local
+	remotePackets chan []byte // write to local
 	localPackets  chan []byte // write to remote, socks5
 	ctx           context.Context
 	ctxCancel     context.CancelFunc
 	closeOne      sync.Once    // to avoid multi close tunnel
 	status        TunnelStatus // to avoid panic: send on closed channel
-	statusMu      sync.Mutex
+	rwMutex       sync.RWMutex
 }
 
 func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) (*TcpTunnel, error) {
@@ -52,21 +52,22 @@ func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) (*TcpTunn
 		wq:            wq,
 		ep:            ep,
 		socks5Conn:    socks5Conn,
-		RemotePackets: make(chan []byte, PktChannelSize),
+		remotePackets: make(chan []byte, PktChannelSize),
 		localPackets:  make(chan []byte, PktChannelSize),
+		rwMutex:       sync.RWMutex{},
 	}, nil
 }
 
 func (tcpTunnel *TcpTunnel) SetStatus(s TunnelStatus) {
-	tcpTunnel.statusMu.Lock()
+	tcpTunnel.rwMutex.Lock()
 	tcpTunnel.status = s
-	tcpTunnel.statusMu.Unlock()
+	tcpTunnel.rwMutex.Unlock()
 }
 
 func (tcpTunnel *TcpTunnel) Status() TunnelStatus {
-	tcpTunnel.statusMu.Lock()
+	tcpTunnel.rwMutex.Lock()
 	s := tcpTunnel.status
-	tcpTunnel.statusMu.Unlock()
+	tcpTunnel.rwMutex.Unlock()
 	return s
 }
 
@@ -150,7 +151,7 @@ readFromRemote:
 			}
 
 			if n > 0 && tcpTunnel.status != StatusClosed {
-				tcpTunnel.RemotePackets <- buf[0:n]
+				tcpTunnel.remotePackets <- buf[0:n]
 			} else {
 				break readFromRemote
 			}
@@ -165,7 +166,7 @@ writeToLocal:
 		case <-tcpTunnel.ctx.Done():
 			log.Printf("WriteToRemote done because of '%s'", tcpTunnel.ctx.Err())
 			break writeToLocal
-		case chunk := <-tcpTunnel.RemotePackets:
+		case chunk := <-tcpTunnel.remotePackets:
 			_, err := tcpTunnel.ep.Write(chunk, nil)
 			if err != nil {
 				log.Println(err)
@@ -187,6 +188,6 @@ func (tcpTunnel *TcpTunnel) Close(reason error) {
 		}
 		tcpTunnel.ep.Close()
 		close(tcpTunnel.localPackets)
-		close(tcpTunnel.RemotePackets)
+		close(tcpTunnel.remotePackets)
 	})
 }
