@@ -41,7 +41,6 @@ func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) (*TcpTunn
 			log.Println("Connect to remote via socks5 failed", err)
 			return nil, err
 		}
-		socks5Conn.SetDeadline(DefaultReadWriteTimeout)
 	} else {
 		log.Println("No support network", network)
 		return nil, errors.New("No support network" + network)
@@ -69,57 +68,59 @@ func (tcpTunnel *TcpTunnel) readFromLocal() {
 	tcpTunnel.wq.EventRegister(&waitEntry, waiter.EventIn)
 	defer tcpTunnel.wq.EventUnregister(&waitEntry)
 
-ReadFromLocal:
+readFromLocal:
 	for {
 		v, err := tcpTunnel.ep.Read(nil)
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {
 				select {
 				case <-tcpTunnel.ctx.Done():
-					log.Printf("ReadFromLocal done because of '%s'", tcpTunnel.ctx.Err())
-					break ReadFromLocal
+					log.Printf("readFromLocal done because of '%s'", tcpTunnel.ctx.Err())
+					break readFromLocal
 				case <-notifyCh:
-					continue ReadFromLocal
+					continue readFromLocal
 				case <-time.After(DefaultReadWriteDuration):
 					log.Println(err)
 					tcpTunnel.Close(errors.New("Read from tun timeout"))
-					break ReadFromLocal
+					break readFromLocal
 				}
 			}
 			log.Println(err)
 			tcpTunnel.Close(errors.New("ReadFromLocalWriteToRemote failed" + err.String()))
-			break ReadFromLocal
+			break readFromLocal
 		}
 		tcpTunnel.localPackets <- v
 	}
 }
 
 func (tcpTunnel *TcpTunnel) writeToRemote() {
-WriteToRemote:
+writeToRemote:
 	for {
 		select {
 		case <-tcpTunnel.ctx.Done():
-			log.Printf("WriteToRemote done because of '%s'", tcpTunnel.ctx.Err())
-			break WriteToRemote
+			log.Printf("writeToRemote done because of '%s'", tcpTunnel.ctx.Err())
+			break writeToRemote
 		case chunk := <-tcpTunnel.localPackets:
 			tcpTunnel.socks5Conn.SetWriteDeadline(DefaultReadWriteTimeout)
 			_, err := tcpTunnel.socks5Conn.Write(chunk)
 			if err != nil {
 				log.Println(err)
 				tcpTunnel.Close(err)
-				break WriteToRemote
+				break writeToRemote
 			}
+		default:
+			continue
 		}
 	}
 }
 
 func (tcpTunnel *TcpTunnel) readFromRemote() {
-ReadFromRemote:
+readFromRemote:
 	for {
 		select {
 		case <-tcpTunnel.ctx.Done():
-			log.Printf("ReadFromRemote done because of '%s'", tcpTunnel.ctx.Err())
-			break ReadFromRemote
+			log.Printf("readFromRemote done because of '%s'", tcpTunnel.ctx.Err())
+			break readFromRemote
 		default:
 			buf := make([]byte, 1500)
 			tcpTunnel.socks5Conn.SetReadDeadline(DefaultReadWriteTimeout)
@@ -127,7 +128,7 @@ ReadFromRemote:
 			if err != nil {
 				log.Println(err)
 				tcpTunnel.Close(err)
-				break ReadFromRemote
+				break readFromRemote
 			}
 
 			if n > 0 {
@@ -138,19 +139,21 @@ ReadFromRemote:
 }
 
 func (tcpTunnel *TcpTunnel) writeToLocal() {
-WriteToLocal:
+writeToLocal:
 	for {
 		select {
 		case <-tcpTunnel.ctx.Done():
 			log.Printf("WriteToRemote done because of '%s'", tcpTunnel.ctx.Err())
-			break WriteToLocal
+			break writeToLocal
 		case chunk := <-tcpTunnel.RemotePackets:
 			_, err := tcpTunnel.ep.Write(chunk, nil)
 			if err != nil {
 				log.Println(err)
 				tcpTunnel.Close(errors.New(err.String()))
-				break WriteToLocal
+				break writeToLocal
 			}
+		default:
+			continue
 		}
 	}
 }
@@ -159,7 +162,12 @@ func (tcpTunnel *TcpTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
 		log.Println("Close TCP tunnel because", reason.Error())
 		tcpTunnel.ctxCancel()
+		err := tcpTunnel.socks5Conn.Close()
+		if err != nil {
+			log.Println("Close socks5Conn falied", err)
+		}
 		tcpTunnel.ep.Close()
-		tcpTunnel.socks5Conn.Close()
+		close(tcpTunnel.localPackets)
+		close(tcpTunnel.RemotePackets)
 	})
 }
