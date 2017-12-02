@@ -21,7 +21,9 @@ type TcpTunnel struct {
 	localPackets  chan []byte // write to remote, socks5
 	ctx           context.Context
 	ctxCancel     context.CancelFunc
-	closeOne      sync.Once
+	closeOne      sync.Once    // to avoid multi close tunnel
+	status        TunnelStatus // to avoid panic: send on closed channel
+	statusMu      sync.Mutex
 }
 
 func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) (*TcpTunnel, error) {
@@ -50,9 +52,22 @@ func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) (*TcpTunn
 		wq:            wq,
 		ep:            ep,
 		socks5Conn:    socks5Conn,
-		RemotePackets: make(chan []byte, 1500),
-		localPackets:  make(chan []byte, 1500),
+		RemotePackets: make(chan []byte, PktChannelSize),
+		localPackets:  make(chan []byte, PktChannelSize),
 	}, nil
+}
+
+func (tcpTunnel *TcpTunnel) SetStatus(s TunnelStatus) {
+	tcpTunnel.statusMu.Lock()
+	tcpTunnel.status = s
+	tcpTunnel.statusMu.Unlock()
+}
+
+func (tcpTunnel *TcpTunnel) Status() TunnelStatus {
+	tcpTunnel.statusMu.Lock()
+	s := tcpTunnel.status
+	tcpTunnel.statusMu.Unlock()
+	return s
 }
 
 func (tcpTunnel *TcpTunnel) Run() {
@@ -61,6 +76,7 @@ func (tcpTunnel *TcpTunnel) Run() {
 	go tcpTunnel.readFromRemote()
 	go tcpTunnel.writeToRemote()
 	go tcpTunnel.readFromLocal()
+	tcpTunnel.SetStatus(StatusProxying)
 }
 
 func (tcpTunnel *TcpTunnel) readFromLocal() {
@@ -89,7 +105,11 @@ readFromLocal:
 			tcpTunnel.Close(errors.New("ReadFromLocalWriteToRemote failed" + err.String()))
 			break readFromLocal
 		}
-		tcpTunnel.localPackets <- v
+		if tcpTunnel.status != StatusClosed {
+			tcpTunnel.localPackets <- v
+		} else {
+			break readFromLocal
+		}
 	}
 }
 
@@ -108,8 +128,6 @@ writeToRemote:
 				tcpTunnel.Close(err)
 				break writeToRemote
 			}
-		default:
-			continue
 		}
 	}
 }
@@ -131,8 +149,10 @@ readFromRemote:
 				break readFromRemote
 			}
 
-			if n > 0 {
+			if n > 0 && tcpTunnel.status != StatusClosed {
 				tcpTunnel.RemotePackets <- buf[0:n]
+			} else {
+				break readFromRemote
 			}
 		}
 	}
@@ -152,14 +172,13 @@ writeToLocal:
 				tcpTunnel.Close(errors.New(err.String()))
 				break writeToLocal
 			}
-		default:
-			continue
 		}
 	}
 }
 
 func (tcpTunnel *TcpTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
+		tcpTunnel.SetStatus(StatusClosed)
 		log.Println("Close TCP tunnel because", reason.Error())
 		tcpTunnel.ctxCancel()
 		err := tcpTunnel.socks5Conn.Close()

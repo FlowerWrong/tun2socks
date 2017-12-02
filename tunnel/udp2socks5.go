@@ -87,8 +87,8 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		endpoint:             endpoint,
 		socks5TcpConn:        socks5TcpConn,
 		udpSocks5Listen:      udpSocks5Listen,
-		RemotePackets:        make(chan []byte, 1500),
-		LocalPackets:         make(chan []byte, 1500),
+		RemotePackets:        make(chan []byte, PktChannelSize),
+		LocalPackets:         make(chan []byte, PktChannelSize),
 		localAddr:            localAddr,
 		ifce:                 ifce,
 		cmdUDPAssociateReply: cmdUDPAssociateReply,
@@ -126,8 +126,6 @@ writeToRemote:
 				udpTunnel.Close(err)
 				break writeToRemote
 			}
-		default:
-			continue
 		}
 	}
 }
@@ -179,8 +177,6 @@ writeToLocal:
 			}
 			udpTunnel.Close(errors.New("OK"))
 			break writeToLocal
-		default:
-			continue
 		}
 	}
 }

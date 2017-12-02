@@ -69,6 +69,9 @@ func main() {
 		log.Fatalf("Unable to convert port %v: %v", portName, err)
 	}
 
+	log.Println("Use CPU number", runtime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	// Create the stack with ip and tcp protocols, then add a tun-based NIC and address.
 	s := stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
 
