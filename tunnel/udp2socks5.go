@@ -11,9 +11,9 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/water"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"github.com/yinghuocho/gosocks"
+	"time"
+	"github.com/FlowerWrong/tun2socks/dns"
 )
 
 type UdpTunnel struct {
@@ -156,6 +156,7 @@ readFromRemote:
 }
 
 func (udpTunnel *UdpTunnel) writeToLocal() {
+	start := time.Now()
 writeToLocal:
 	for {
 		select {
@@ -165,10 +166,22 @@ writeToLocal:
 		case chunk := <-udpTunnel.RemotePackets:
 			remoteHost := udpTunnel.endpoint.LocalAddress.To4().String()
 			remotePort := udpTunnel.endpoint.LocalPort
-			dnsPkt := createDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, chunk)
-			_, err := udpTunnel.ifce.Write(dnsPkt)
+			pkt := dns.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, chunk)
+			if pkt == nil {
+				udpTunnel.Close(errors.New("pack ip packet return nil"))
+				break writeToLocal
+			}
+			_, err := udpTunnel.ifce.Write(pkt)
 			if err != nil {
 				log.Println("Write to tun failed", err)
+			} else {
+				// cache dns packet
+				end := time.Now()
+				ms := end.Sub(start).Nanoseconds() / 1000000
+				log.Printf("DNS session response received: %d ms", ms)
+				if dns.DNSCache != nil {
+					dns.DNSCache.Store(chunk)
+				}
 			}
 			if err != nil {
 				log.Println(err)
@@ -197,30 +210,4 @@ func (udpTunnel *UdpTunnel) Close(reason error) {
 		close(udpTunnel.LocalPackets)
 		close(udpTunnel.RemotePackets)
 	})
-}
-
-func createDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint16, pkt []byte) []byte {
-	ip := &layers.IPv4{
-		SrcIP:    SrcIP,
-		DstIP:    DstIP,
-		Protocol: layers.IPProtocolUDP,
-		Version:  uint8(4),
-		IHL:      uint8(5),
-		TTL:      uint8(64),
-	}
-	udp := &layers.UDP{SrcPort: layers.UDPPort(SrcPort), DstPort: layers.UDPPort(DstPort)}
-	if err := udp.SetNetworkLayerForChecksum(ip); err != nil {
-		log.Println("SetNetworkLayerForChecksum failed", err)
-		return nil
-	}
-	buf := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
-	gopacket.SerializeLayers(buf, opts,
-		ip,
-		udp,
-		gopacket.Payload(pkt),
-	)
-
-	packetData := buf.Bytes()
-	return packetData
 }
