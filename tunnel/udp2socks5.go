@@ -16,6 +16,7 @@ import (
 	"github.com/FlowerWrong/tun2socks/dns"
 )
 
+// Udp tunnel
 type UdpTunnel struct {
 	endpoint             stack.TransportEndpointID
 	socks5TcpConn        *gosocks.SocksConn
@@ -30,6 +31,7 @@ type UdpTunnel struct {
 	closeOne             sync.Once
 }
 
+// Create a udp tunnel
 func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, ifce *water.Interface) (*UdpTunnel, error) {
 	localTcpSocks5Dialer := &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
@@ -102,6 +104,7 @@ func (udpTunnel *UdpTunnel) Run() {
 	go udpTunnel.writeToRemote()
 }
 
+// Write udp packet to upstream
 func (udpTunnel *UdpTunnel) writeToRemote() {
 writeToRemote:
 	for {
@@ -130,6 +133,7 @@ writeToRemote:
 	}
 }
 
+// Read udp packet from upstream
 func (udpTunnel *UdpTunnel) readFromRemote() {
 readFromRemote:
 	for {
@@ -155,6 +159,7 @@ readFromRemote:
 	}
 }
 
+// Write upstream udp packet to local
 func (udpTunnel *UdpTunnel) writeToLocal() {
 	start := time.Now()
 writeToLocal:
@@ -194,6 +199,7 @@ writeToLocal:
 	}
 }
 
+// Close this udp tunnel
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
 		log.Println("Close UDP tunnel because", reason.Error())

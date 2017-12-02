@@ -17,6 +17,7 @@ type dnsCache struct {
 	storage map[string]*dnsCacheEntry
 }
 
+// Create a dnsCache struct pointer
 func NewDnsCache() *dnsCache {
 	return &dnsCache{
 		rwMutex: sync.RWMutex{},
@@ -24,14 +25,18 @@ func NewDnsCache() *dnsCache {
 	}
 }
 
+// Global dnsCache struct pointer
 var DNSCache = NewDnsCache()
 
+// Pack uint 16
 func packUint16(i uint16) []byte { return []byte{byte(i >> 8), byte(i)} }
 
+// Cache key
 func cacheKey(q dns.Question) string {
 	return string(append([]byte(q.Name), packUint16(q.Qtype)...))
 }
 
+// Query a dns msg from cache with dns []byte
 func (c *dnsCache) Query(payload []byte) *dns.Msg {
 	request := new(dns.Msg)
 	err := request.Unpack(payload)
@@ -60,6 +65,7 @@ func (c *dnsCache) Query(payload []byte) *dns.Msg {
 	return entry.msg
 }
 
+// Store a dns msg to cache with dns []byte
 func (c *dnsCache) Store(payload []byte) {
 	dnsMsg := new(dns.Msg)
 	err := dnsMsg.Unpack(payload)

@@ -7,6 +7,7 @@ import (
 	"log"
 )
 
+// Create a DNS response with dns data, pack with udp, and ip header.
 func CreateDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint16, pkt []byte) []byte {
 	ip := &layers.IPv4{
 		SrcIP:    SrcIP,

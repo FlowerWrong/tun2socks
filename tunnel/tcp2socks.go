@@ -13,6 +13,7 @@ import (
 	"sync"
 )
 
+// Tcp tunnel
 type TcpTunnel struct {
 	wq            *waiter.Queue
 	ep            tcpip.Endpoint
@@ -26,6 +27,7 @@ type TcpTunnel struct {
 	rwMutex       sync.RWMutex
 }
 
+// Create a tcp tunnel
 func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) (*TcpTunnel, error) {
 	// connect to socks5
 	var socks5Conn net.Conn
@@ -58,12 +60,14 @@ func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) (*TcpTunn
 	}, nil
 }
 
+// Set tcp tunnel status with rwMutex
 func (tcpTunnel *TcpTunnel) SetStatus(s TunnelStatus) {
 	tcpTunnel.rwMutex.Lock()
 	tcpTunnel.status = s
 	tcpTunnel.rwMutex.Unlock()
 }
 
+// Get tcp tunnel status with rwMutex
 func (tcpTunnel *TcpTunnel) Status() TunnelStatus {
 	tcpTunnel.rwMutex.Lock()
 	s := tcpTunnel.status
@@ -71,6 +75,7 @@ func (tcpTunnel *TcpTunnel) Status() TunnelStatus {
 	return s
 }
 
+// Start tcp tunnel
 func (tcpTunnel *TcpTunnel) Run() {
 	tcpTunnel.ctx, tcpTunnel.ctxCancel = context.WithCancel(context.Background())
 	go tcpTunnel.writeToLocal()
@@ -80,6 +85,7 @@ func (tcpTunnel *TcpTunnel) Run() {
 	tcpTunnel.SetStatus(StatusProxying)
 }
 
+// Read tcp packet form local netstack
 func (tcpTunnel *TcpTunnel) readFromLocal() {
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	tcpTunnel.wq.EventRegister(&waitEntry, waiter.EventIn)
@@ -114,6 +120,8 @@ readFromLocal:
 	}
 }
 
+
+// Write tcp packet to upstream
 func (tcpTunnel *TcpTunnel) writeToRemote() {
 writeToRemote:
 	for {
@@ -133,6 +141,7 @@ writeToRemote:
 	}
 }
 
+// Read tcp packet from upstream
 func (tcpTunnel *TcpTunnel) readFromRemote() {
 readFromRemote:
 	for {
@@ -159,6 +168,7 @@ readFromRemote:
 	}
 }
 
+// Write tcp packet to local netstack
 func (tcpTunnel *TcpTunnel) writeToLocal() {
 writeToLocal:
 	for {
@@ -177,6 +187,7 @@ writeToLocal:
 	}
 }
 
+// Close this tcp tunnel
 func (tcpTunnel *TcpTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
 		tcpTunnel.SetStatus(StatusClosed)
