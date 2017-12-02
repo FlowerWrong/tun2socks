@@ -12,6 +12,7 @@ import (
 	"github.com/yinghuocho/gosocks"
 	"log"
 	"net"
+	"sync"
 )
 
 type UdpTunnel struct {
@@ -25,6 +26,7 @@ type UdpTunnel struct {
 	localAddr            tcpip.FullAddress
 	ifce                 *water.Interface
 	cmdUDPAssociateReply *gosocks.SocksReply
+	closeOne             sync.Once
 }
 
 func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, ifce *water.Interface) (*UdpTunnel, error) {
@@ -162,17 +164,19 @@ WriteToLocal:
 				break WriteToLocal
 			}
 			udpTunnel.Close(errors.New("OK"))
+			break WriteToLocal
 		}
 	}
 }
 
 func (udpTunnel *UdpTunnel) Close(reason error) {
-	log.Println("Close UDP tunnel because", reason.Error())
-	udpTunnel.ctxCancel()
-	udp.UDPNatList.DelUDPNat(udpTunnel.localAddr.Port)
-	udpTunnel.socks5TcpConn.Close()
-	udpTunnel.udpSocks5Listen.Close()
-	return
+	udpTunnel.closeOne.Do(func() {
+		log.Println("Close UDP tunnel because", reason.Error())
+		udpTunnel.ctxCancel()
+		udp.UDPNatList.DelUDPNat(udpTunnel.localAddr.Port)
+		udpTunnel.udpSocks5Listen.Close()
+		udpTunnel.socks5TcpConn.Close()
+	})
 }
 
 func createDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint16, pkt []byte) []byte {

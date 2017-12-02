@@ -150,6 +150,8 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 				continue
 			}
 			log.Println("Read failed:", err)
+			udp.UDPNatList.DelUDPNat(localAddr.Port)
+			continue
 		}
 
 		log.Println("There are", len(udp.UDPNatList.Data), "UDP connections")

@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/proxy"
 	"fmt"
 	"time"
+	"sync"
 )
 
 type TcpTunnel struct {
@@ -20,6 +21,7 @@ type TcpTunnel struct {
 	localPackets  chan []byte // write to remote, socks5
 	ctx           context.Context
 	ctxCancel     context.CancelFunc
+	closeOne      sync.Once
 }
 
 func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) (*TcpTunnel, error) {
@@ -154,9 +156,10 @@ WriteToLocal:
 }
 
 func (tcpTunnel *TcpTunnel) Close(reason error) {
-	log.Println("Close TCP tunnel because", reason.Error())
-	tcpTunnel.ctxCancel()
-	tcpTunnel.ep.Close()
-	tcpTunnel.socks5Conn.Close()
-	return
+	tcpTunnel.closeOne.Do(func() {
+		log.Println("Close TCP tunnel because", reason.Error())
+		tcpTunnel.ctxCancel()
+		tcpTunnel.ep.Close()
+		tcpTunnel.socks5Conn.Close()
+	})
 }
