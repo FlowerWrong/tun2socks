@@ -5,8 +5,10 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"fmt"
@@ -70,6 +72,25 @@ func main() {
 		log.Fatalf("Unable to convert port %v: %v", portName, err)
 	}
 
+	// signal handler
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGUSR1, syscall.SIGUSR2)
+	go func() {
+		for s := range c {
+			switch s {
+			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
+				fmt.Println("退出", s)
+				Exit()
+			case syscall.SIGUSR1:
+				fmt.Println("usr1", s)
+			case syscall.SIGUSR2:
+				fmt.Println("usr2", s)
+			default:
+				fmt.Println("other", s)
+			}
+		}
+	}()
+
 	log.Println("Use CPU number", runtime.NumCPU())
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
@@ -125,6 +146,12 @@ func main() {
 	waitGroup.Add(1)
 	go NewUDPEndpointAndListenIt(s, proto, localPort, waitGroup, ifce)
 	waitGroup.Wait()
+}
+
+// Exit tun2socks
+func Exit() {
+	// TODO cleanup
+	os.Exit(0)
 }
 
 // Create UDP endpoint, bind it, then start listening.

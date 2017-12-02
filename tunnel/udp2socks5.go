@@ -29,6 +29,8 @@ type UdpTunnel struct {
 	ifce                 *water.Interface
 	cmdUDPAssociateReply *gosocks.SocksReply
 	closeOne             sync.Once
+	status               TunnelStatus // to avoid panic: send on closed channel
+	rwMutex              sync.RWMutex
 }
 
 // Create a udp tunnel
@@ -97,11 +99,27 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 	}, nil
 }
 
+// Set udp tunnel status with rwMutex
+func (udpTunnel *UdpTunnel) SetStatus(s TunnelStatus) {
+	udpTunnel.rwMutex.Lock()
+	udpTunnel.status = s
+	udpTunnel.rwMutex.Unlock()
+}
+
+// Get udp tunnel status with rwMutex
+func (udpTunnel *UdpTunnel) Status() TunnelStatus {
+	udpTunnel.rwMutex.Lock()
+	s := udpTunnel.status
+	udpTunnel.rwMutex.Unlock()
+	return s
+}
+
 func (udpTunnel *UdpTunnel) Run() {
 	udpTunnel.ctx, udpTunnel.ctxCancel = context.WithCancel(context.Background())
 	go udpTunnel.writeToLocal()
 	go udpTunnel.readFromRemote()
 	go udpTunnel.writeToRemote()
+	udpTunnel.SetStatus(StatusProxying)
 }
 
 // Write udp packet to upstream
@@ -148,7 +166,9 @@ readFromRemote:
 			if n > 0 {
 				udpBuf := make([]byte, n)
 				copy(udpBuf, udpSocks5Buf[:n])
-				udpTunnel.RemotePackets <- udpBuf[10:]
+				if udpTunnel.status != StatusClosed {
+					udpTunnel.RemotePackets <- udpBuf[10:]
+				}
 			}
 			if err != nil {
 				log.Println("ReadFromUDP tunnel failed", err)
@@ -203,6 +223,7 @@ writeToLocal:
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
 		log.Println("Close UDP tunnel because", reason.Error())
+		udpTunnel.SetStatus(StatusClosed)
 		udpTunnel.ctxCancel()
 		err := udpTunnel.socks5TcpConn.Close()
 		if err != nil {
