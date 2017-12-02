@@ -101,7 +101,7 @@ writeToRemote:
 			log.Printf("writeToRemote done because of '%s'", tcpTunnel.ctx.Err())
 			break writeToRemote
 		case chunk := <-tcpTunnel.localPackets:
-			tcpTunnel.socks5Conn.SetWriteDeadline(DefaultReadWriteTimeout)
+			// tcpTunnel.socks5Conn.SetWriteDeadline(DefaultReadWriteTimeout)
 			_, err := tcpTunnel.socks5Conn.Write(chunk)
 			if err != nil {
 				log.Println(err)
@@ -123,7 +123,7 @@ readFromRemote:
 			break readFromRemote
 		default:
 			buf := make([]byte, 1500)
-			tcpTunnel.socks5Conn.SetReadDeadline(DefaultReadWriteTimeout)
+			// tcpTunnel.socks5Conn.SetReadDeadline(DefaultReadWriteTimeout)
 			n, err := tcpTunnel.socks5Conn.Read(buf)
 			if err != nil {
 				log.Println(err)
