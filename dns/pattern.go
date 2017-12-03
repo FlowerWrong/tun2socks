@@ -2,12 +2,11 @@
 package dns
 
 import (
+	"github.com/FlowerWrong/tun2socks/geoip"
 	"github.com/FlowerWrong/tun2socks/util"
 	"net"
 	"sort"
 	"strings"
-
-	"github.com/xjdrew/kone/geoip" // TODO
 )
 
 const (
