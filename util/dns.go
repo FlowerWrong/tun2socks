@@ -1,10 +1,10 @@
-package dns
+package util
 
 import (
-	"net"
-	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"log"
+	"net"
 )
 
 // Create a DNS response with dns data, pack with udp, and ip header.

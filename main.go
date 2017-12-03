@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/FlowerWrong/tun2socks/util"
 	"log"
 	"math/rand"
 	"net"
@@ -194,7 +195,7 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 		if answer != nil {
 			data, err := answer.Pack()
 			if err == nil {
-				pkt := dns.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(localAddr.Addr.To4().String()), localAddr.Port, data)
+				pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(localAddr.Addr.To4().String()), localAddr.Port, data)
 				if pkt == nil {
 					continue
 				}

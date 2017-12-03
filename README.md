@@ -6,9 +6,12 @@ NO, it is not useable.
 
 ## Known bugs
 
+* [ ] download software may be not complete, eg `brew upgrade atom`,
+  maybe downloaded 43%, but actually 100%.
+
 ## TODO
 
-* [ ] linux transocks with iptables with DNAT/REDIRECT target, without netstack. eg [cybozu-go/transocks](https://github.com/cybozu-go/transocks)
 * [ ] dns fake mode, return a faked ip with rules, eg surge
 * [ ] less buf copy
 * [ ] windows support
+* [ ] tunnel remained buf

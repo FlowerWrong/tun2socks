@@ -3,6 +3,7 @@ package tunnel
 import (
 	"context"
 	"errors"
+	"github.com/FlowerWrong/tun2socks/util"
 	"log"
 	"net"
 	"sync"
@@ -191,7 +192,7 @@ writeToLocal:
 		case chunk := <-udpTunnel.RemotePackets:
 			remoteHost := udpTunnel.endpoint.LocalAddress.To4().String()
 			remotePort := udpTunnel.endpoint.LocalPort
-			pkt := dns.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, chunk)
+			pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, chunk)
 			if pkt == nil {
 				udpTunnel.Close(errors.New("pack ip packet return nil"))
 				break writeToLocal
