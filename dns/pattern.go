@@ -2,6 +2,7 @@
 package dns
 
 import (
+	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/FlowerWrong/tun2socks/geoip"
 	"github.com/FlowerWrong/tun2socks/util"
 	"net"
@@ -20,12 +21,6 @@ type Pattern interface {
 	Name() string
 	Proxy() string
 	Match(val interface{}) bool
-}
-
-type PatternConfig struct {
-	Proxy  string
-	Scheme string
-	V      []string
 }
 
 // DOMAIN-SUFFIX
@@ -256,7 +251,7 @@ func IsExistPatternScheme(scheme string) bool {
 	return ok
 }
 
-func CreatePattern(name string, config *PatternConfig) Pattern {
+func CreatePattern(name string, config *configure.PatternConfig) Pattern {
 	if f := patternSchemes[config.Scheme]; f != nil {
 		return f(name, config.Proxy, config.V)
 	}

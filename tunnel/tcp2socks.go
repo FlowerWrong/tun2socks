@@ -120,7 +120,6 @@ readFromLocal:
 	}
 }
 
-
 // Write tcp packet to upstream
 func (tcpTunnel *TcpTunnel) writeToRemote() {
 writeToRemote:

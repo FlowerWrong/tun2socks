@@ -11,15 +11,17 @@ const (
 )
 
 type GeneralConfig struct {
-	Network string // tun network
+	Network      string // tun network
+	NetstackAddr string `gcfg:"netstack-addr"`
+	NetstackPort uint16 `gcfg:"netstack-port"`
 }
 
 type DnsConfig struct {
-	DnsPort         uint16   `gcfg:"dns-port"`
-	DnsTtl          uint     `gcfg:"dns-ttl"`
-	DnsPacketSize   uint16   `gcfg:"dns-packet-size"`
-	DnsReadTimeout  uint     `gcfg:"dns-read-timeout"`
-	DnsWriteTimeout uint     `gcfg:"dns-write-timeout"`
+	DnsPort         uint16 `gcfg:"dns-port"`
+	DnsTtl          uint   `gcfg:"dns-ttl"`
+	DnsPacketSize   uint16 `gcfg:"dns-packet-size"`
+	DnsReadTimeout  uint   `gcfg:"dns-read-timeout"`
+	DnsWriteTimeout uint   `gcfg:"dns-write-timeout"`
 	Nameserver      []string // backend dns
 }
 
@@ -62,6 +64,8 @@ func Parse(filename string) (*AppConfig, error) {
 
 	// set default value
 	cfg.General.Network = "10.192.0.1/16"
+	cfg.General.NetstackAddr = "10.192.0.2"
+	cfg.General.NetstackPort = 7777
 
 	cfg.Dns.DnsPort = dnsDefaultPort
 	cfg.Dns.DnsTtl = dnsDefaultTtl

@@ -4,6 +4,7 @@ package dns
 import (
 	"errors"
 	"fmt"
+	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/miekg/dns"
 	"github.com/miekg/dns/dnsutil"
 	"log"
@@ -18,9 +19,8 @@ type Dns struct {
 	server      *dns.Server
 	client      *dns.Client
 	nameservers []string
-
-	rule     *Rule
-	dnsTable *DnsTable
+	rule        *Rule
+	dnsTable    *DnsTable
 }
 
 func isIPv4Query(q dns.Question) bool {
@@ -182,7 +182,7 @@ func (d *Dns) Serve() error {
 	return d.server.ListenAndServe()
 }
 
-func NewFakeDnsServer() (*Dns, error) {
+func NewFakeDnsServer(cfg *configure.AppConfig) (*Dns, error) {
 	d := new(Dns)
 	server := &dns.Server{
 		Net:          "udp",
@@ -213,7 +213,6 @@ func NewFakeDnsServer() (*Dns, error) {
 
 	// new dns cache
 	d.dnsTable = NewDnsTable(ip, subnet)
-
 
 	return d, nil
 }

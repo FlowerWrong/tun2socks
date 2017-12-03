@@ -1,13 +1,14 @@
 package main
 
 import (
+	"flag"
+	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/FlowerWrong/tun2socks/util"
 	"log"
 	"math/rand"
 	"net"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -37,23 +38,30 @@ func execCommand(name, sargs string) error {
 }
 
 func main() {
-	if len(os.Args) != 5 {
-		log.Fatal("Usage: ", os.Args[0], " <local-address> <local-port> <socks5-address> <socks5-port>")
-	}
-
-	addrName := os.Args[1]
-	portName := os.Args[2]
-	tunnel.Socks5Addr = os.Args[3] + ":" + os.Args[4]
-
 	rand.Seed(time.Now().UnixNano())
 
 	// log with file and line number
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
+	log.Println("Use CPU number", runtime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	config := flag.String("config", "", "config file")
+	flag.Parse()
+
+	configFile := *config
+	if configFile == "" {
+		configFile = flag.Arg(0)
+	}
+	// parse config
+	cfg, err := configure.Parse(configFile)
+
+	tunnel.Socks5Addr = "127.0.0.1:1080"
+
 	// Parse the IP address. Support both ipv4 and ipv6.
-	parsedAddr := net.ParseIP(addrName)
+	parsedAddr := net.ParseIP(cfg.General.NetstackAddr)
 	if parsedAddr == nil {
-		log.Fatalf("Bad IP address: %v", addrName)
+		log.Fatalf("Bad IP address: %v", cfg.General.NetstackAddr)
 	}
 
 	var addr tcpip.Address
@@ -65,12 +73,7 @@ func main() {
 		addr = tcpip.Address(parsedAddr.To16())
 		proto = ipv6.ProtocolNumber
 	} else {
-		log.Fatalf("Unknown IP type: %v", addrName)
-	}
-
-	localPort, err := strconv.Atoi(portName)
-	if err != nil {
-		log.Fatalf("Unable to convert port %v: %v", portName, err)
+		log.Fatalf("Unknown IP type: %v", cfg.General.NetstackAddr)
 	}
 
 	// signal handler
@@ -92,9 +95,6 @@ func main() {
 		}
 	}()
 
-	log.Println("Use CPU number", runtime.NumCPU())
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	// Create the stack with ip and tcp protocols, then add a tun-based NIC and address.
 	s := stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
 
@@ -109,12 +109,12 @@ func main() {
 	log.Printf("Interface Name: %s\n", ifce.Name())
 
 	if runtime.GOOS == "darwin" {
-		sargs := fmt.Sprintf("%s 10.0.0.1 %s mtu %d netmask 255.255.255.0 up", ifce.Name(), addrName, mtu)
+		sargs := fmt.Sprintf("%s %s %s mtu %d netmask 255.255.255.0 up", ifce.Name(), cfg.General.NetstackAddr, cfg.General.NetstackAddr, mtu)
 		if err := execCommand("/sbin/ifconfig", sargs); err != nil {
 			log.Fatal("execCommand failed", err)
 		}
 	} else if runtime.GOOS == "linux" {
-		sargs := fmt.Sprintf("%s 10.0.0.1 netmask 255.255.255.0", ifce.Name())
+		sargs := fmt.Sprintf("%s %s netmask 255.255.255.0", ifce.Name(), cfg.General.NetstackAddr)
 		if err := execCommand("/sbin/ifconfig", sargs); err != nil {
 			log.Fatal("execCommand failed", err)
 		}
@@ -123,7 +123,7 @@ func main() {
 	}
 
 	linkID := fdbased.New(ifce, fd, mtu, nil)
-	if err := s.CreateNIC(1, linkID, true, addr, uint16(localPort)); err != nil {
+	if err := s.CreateNIC(1, linkID, true, addr, cfg.General.NetstackPort); err != nil {
 		log.Fatal("Create NIC failed", err)
 	}
 
@@ -147,14 +147,14 @@ func main() {
 	//waitGroup.Add(1)
 	//go NewUDPEndpointAndListenIt(s, proto, localPort, waitGroup, ifce)
 	waitGroup.Add(1)
-	go func(waitGroup sync.WaitGroup) {
-		dns, err := dns.NewFakeDnsServer()
+	go func(waitGroup sync.WaitGroup, cfg *configure.AppConfig) {
+		dns, err := dns.NewFakeDnsServer(cfg)
 		if err != nil {
 			log.Fatal("new fake dns server failed", err)
 		}
 		dns.Serve()
 		waitGroup.Done()
-	}(waitGroup)
+	}(waitGroup, cfg)
 	waitGroup.Wait()
 }
 

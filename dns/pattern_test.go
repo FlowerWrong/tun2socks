@@ -64,7 +64,7 @@ func TestIPCountryPattern(t *testing.T) {
 	cases := map[interface{}]bool{
 		util.ConvertIPv4ToUint32(net.ParseIP("216.58.197.99")):   true,  // google.hk
 		util.ConvertIPv4ToUint32(net.ParseIP("8.8.8.8")):         true,  // google us dns
-		"8.8.8.8":                                                 false, // must be a net.IP or uint32 for IPCountryPattern
+		"8.8.8.8":                                                false, // must be a net.IP or uint32 for IPCountryPattern
 		util.ConvertIPv4ToUint32(net.ParseIP("114.114.114.114")): false, // china dns
 	}
 	checkCases(t, proxy, pattern, cases)
@@ -88,7 +88,7 @@ func TestIPCIDRPattern(t *testing.T) {
 		util.ConvertIPv4ToUint32(net.ParseIP("172.16.0.0")):      false,
 		util.ConvertIPv4ToUint32(net.ParseIP("172.16.0.1")):      true,
 		util.ConvertIPv4ToUint32(net.ParseIP("172.16.0.2")):      false,
-		"172.16.0.1":                                              false, // must be a net.IP or uint32 for IPCountryPattern
+		"172.16.0.1":                                             false, // must be a net.IP or uint32 for IPCountryPattern
 	}
 	checkCases(t, proxy, pattern, cases)
 }

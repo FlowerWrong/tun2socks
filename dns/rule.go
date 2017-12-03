@@ -1,16 +1,14 @@
 // code is copy from https://github.com/xjdrew/kone, Thanks xjdrew
 package dns
 
-import "log"
+import (
+	"github.com/FlowerWrong/tun2socks/configure"
+	"log"
+)
 
 type Rule struct {
 	patterns []Pattern
 	final    string
-}
-
-type RuleConfig struct {
-	Pattern []string
-	Final   string
 }
 
 func (rule *Rule) DirectDomain(domain string) {
@@ -32,7 +30,7 @@ func (rule *Rule) Proxy(val interface{}) (bool, string) {
 	return false, rule.final
 }
 
-func NewRule(config RuleConfig, patterns map[string]*PatternConfig) *Rule {
+func NewRule(config configure.RuleConfig, patterns map[string]*configure.PatternConfig) *Rule {
 	rule := new(Rule)
 	rule.final = config.Final
 	pattern := NewDomainSuffixPattern("__internal__", "", nil)
