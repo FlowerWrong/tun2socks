@@ -142,10 +142,19 @@ func main() {
 	})
 
 	var waitGroup sync.WaitGroup
+	//waitGroup.Add(1)
+	//go NewTCPEndpointAndListenIt(s, proto, localPort, waitGroup)
+	//waitGroup.Add(1)
+	//go NewUDPEndpointAndListenIt(s, proto, localPort, waitGroup, ifce)
 	waitGroup.Add(1)
-	go NewTCPEndpointAndListenIt(s, proto, localPort, waitGroup)
-	waitGroup.Add(1)
-	go NewUDPEndpointAndListenIt(s, proto, localPort, waitGroup, ifce)
+	go func(waitGroup sync.WaitGroup) {
+		dns, err := dns.NewFakeDnsServer()
+		if err != nil {
+			log.Fatal("new fake dns server failed", err)
+		}
+		dns.Serve()
+		waitGroup.Done()
+	}(waitGroup)
 	waitGroup.Wait()
 }
 
