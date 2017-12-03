@@ -1,5 +1,5 @@
 // fake dns pool
-// code is copy from https://github.com/xjdrew/kone/blob/master/k1/dns_ip_pool.go, Thanks xjdrew
+// code is copy from https://github.com/xjdrew/kone, Thanks xjdrew
 package dns
 
 import (
