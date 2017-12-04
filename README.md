@@ -11,7 +11,6 @@ NO, it is not useable.
 
 ## TODO
 
-* [ ] dns fake mode, return a faked ip with rules, eg surge
 * [ ] less buf copy
 * [ ] windows support
 * [ ] tunnel remained buf

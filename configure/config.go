@@ -25,7 +25,6 @@ type GeneralConfig struct {
 
 type DnsConfig struct {
 	DnsMode         string `gcfg:"dns-mode"`
-	Proxy           string
 	DnsPort         uint16 `gcfg:"dns-port"`
 	DnsTtl          uint   `gcfg:"dns-ttl"`
 	DnsPacketSize   uint16 `gcfg:"dns-packet-size"`
@@ -54,9 +53,14 @@ type ProxyConfig struct {
 	Default bool
 }
 
+type UdpConfig struct {
+	Proxy string
+}
+
 type AppConfig struct {
 	General GeneralConfig
 	Dns     DnsConfig
+	Udp     UdpConfig
 	Route   RouteConfig
 	Proxy   map[string]*ProxyConfig
 	Pattern map[string]*PatternConfig
@@ -78,7 +82,6 @@ func Parse(filename string) (*AppConfig, error) {
 	cfg.General.Mtu = 1500
 
 	cfg.Dns.DnsMode = "fake"
-	cfg.Dns.Proxy = ""
 	cfg.Dns.DnsPort = DnsDefaultPort
 	cfg.Dns.DnsTtl = DnsDefaultTtl
 	cfg.Dns.DnsPacketSize = DnsDefaultPacketSize
@@ -107,28 +110,28 @@ func Parse(filename string) (*AppConfig, error) {
 
 // Get default proxy, eg: socks5://127.0.0.1:1080, return 127.0.0.1:1080
 func (cfg *AppConfig) DefaultPorxy() (string, error) {
+	proxyConfig := cfg.DefaultPorxyConfig()
+	url, err := url.Parse(proxyConfig.Url)
+	if err != nil {
+		log.Println("Parse url failed", err)
+		return "", err
+	}
+	return url.Host, nil
+}
+
+func (cfg *AppConfig) DefaultPorxyConfig() *ProxyConfig {
 	for _, proxyConfig := range cfg.Proxy {
 		if proxyConfig.Default {
-			url, err := url.Parse(proxyConfig.Url)
-			if err != nil {
-				log.Println("Parse url failed", err)
-				break
-			}
-			return url.Host, nil
+			return proxyConfig
 		}
 	}
-
-	return "", errors.New("404")
+	return nil
 }
 
 func (cfg *AppConfig) UdpProxy() (string, error) {
-	proxyConfig := cfg.Proxy[cfg.Dns.Proxy]
+	proxyConfig := cfg.Proxy[cfg.Udp.Proxy]
 	if proxyConfig == nil {
-		for _, pc := range cfg.Proxy {
-			if pc.Default {
-				proxyConfig = pc
-			}
-		}
+		proxyConfig = cfg.DefaultPorxyConfig()
 	}
 	if proxyConfig != nil {
 		url, err := url.Parse(proxyConfig.Url)
