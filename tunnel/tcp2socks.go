@@ -7,9 +7,11 @@ import (
 	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/netstack/tcpip"
 	"log"
-	"golang.org/x/net/proxy"
 	"time"
 	"sync"
+	"fmt"
+	"github.com/FlowerWrong/tun2socks/dns"
+	"github.com/FlowerWrong/tun2socks/configure"
 )
 
 // Tcp tunnel
@@ -27,34 +29,43 @@ type TcpTunnel struct {
 }
 
 // Create a tcp tunnel
-func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string, targetAddr string) (*TcpTunnel, error) {
-	// connect to socks5
-	var socks5Conn net.Conn
-	if network == "tcp" {
-		log.Println(Socks5Addr)
-		dialer, err := proxy.SOCKS5(network, Socks5Addr, nil, proxy.Direct)
-		if err != nil {
-			log.Println("Create SOCKS5 failed", err)
-			return nil, err
-		}
-		socks5Conn, err = dialer.Dial(network, targetAddr)
-		if err != nil {
-			log.Println("Connect to remote via socks5 failed", err)
-			return nil, err
-		}
-	} else {
-		log.Println("No support network", network)
-		return nil, errors.New("No support network" + network)
+func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, fakeDns *dns.Dns, proxies *configure.Proxies) (*TcpTunnel, error) {
+	socks5Conn, err := NewSocks5Conneciton(ip, port, fakeDns, proxies)
+	if err != nil {
+		log.Println("New socks5 conn failed", err)
+		return nil, err
 	}
 
 	return &TcpTunnel{
 		wq:            wq,
 		ep:            ep,
-		socks5Conn:    socks5Conn,
+		socks5Conn:    *socks5Conn,
 		remotePackets: make(chan []byte, PktChannelSize),
 		localPackets:  make(chan []byte, PktChannelSize),
 		rwMutex:       sync.RWMutex{},
 	}, nil
+}
+
+// New socks5 connection
+func NewSocks5Conneciton(ip net.IP, port uint16, fakeDns *dns.Dns, proxies *configure.Proxies) (*net.Conn, error) {
+	var remoteAddr string
+	proxy := ""
+
+	record := fakeDns.DnsTablePtr.GetByIP(ip)
+	if record != nil {
+		remoteAddr = fmt.Sprintf("%v:%d", record.Hostname, port)
+		proxy = record.Proxy
+	} else {
+		remoteAddr = fmt.Sprintf("%v:%d", ip, port)
+	}
+
+	socks5Conn, err := proxies.Dial(proxy, remoteAddr)
+	if err != nil {
+		socks5Conn.Close()
+		log.Printf("[tcp] dial %s by proxy %q failed: %s", remoteAddr, proxy, err)
+		return nil, err
+	}
+	return &socks5Conn, nil
 }
 
 // Set tcp tunnel status with rwMutex

@@ -11,6 +11,8 @@ import (
 	"net"
 	"sync"
 	"time"
+	"strings"
+	"github.com/xjdrew/proxy"
 )
 
 var resolveErr = errors.New("resolve error")
@@ -213,6 +215,20 @@ func NewFakeDnsServer(cfg *configure.AppConfig) (*Dns, error) {
 
 	// new dns cache
 	d.DnsTablePtr = NewDnsTable(ip, subnet)
+
+	// don't hijack proxy domain
+	for _, item := range cfg.Proxy {
+		proxy, err := proxy.FromUrl(item.Url)
+		if err != nil {
+			return nil, err
+		}
+		host := proxy.Url.Host
+		index := strings.IndexByte(proxy.Url.Host, ':')
+		if index > 0 {
+			host = proxy.Url.Host[:index]
+		}
+		d.RulePtr.DirectDomain(host)
+	}
 
 	return d, nil
 }

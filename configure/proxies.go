@@ -49,14 +49,6 @@ func NewProxies(config map[string]*ProxyConfig) (*Proxies, error) {
 			p.Default = name
 		}
 		proxies[name] = proxy
-
-		// don't hijack proxy domain TODO
-		//host := proxy.Url.Host
-		//index := strings.IndexByte(proxy.Url.Host, ':')
-		//if index > 0 {
-		//	host = proxy.Url.Host[:index]
-		//}
-		//d.RulePtr.DirectDomain(host)
 	}
 	p.proxies = proxies
 	log.Printf("[proxies] default proxy: %q", p.Default)

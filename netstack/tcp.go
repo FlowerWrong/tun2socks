@@ -2,7 +2,6 @@ package netstack
 
 import (
 	"sync"
-	"fmt"
 	"net"
 	"github.com/FlowerWrong/tun2socks/tunnel"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
@@ -11,10 +10,11 @@ import (
 	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
 	"log"
+	"github.com/FlowerWrong/tun2socks/configure"
 )
 
 // Create TCP endpoint, bind it, then start listening.
-func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber, localPort int, waitGroup sync.WaitGroup, fakeDns *dns.Dns) {
+func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber, localPort int, waitGroup sync.WaitGroup, fakeDns *dns.Dns, proxies *configure.Proxies) {
 	var wq waiter.Queue
 	ep, err := s.NewEndpoint(tcp.ProtocolNumber, proto, &wq)
 	if err != nil {
@@ -47,16 +47,8 @@ func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 		}
 
 		local, _ := endpoint.GetLocalAddress()
-		var targetAddr string
-
-		ip := fmt.Sprintf("%v", local.Addr.To4())
-		dd := fakeDns.DnsTablePtr.GetByIP(net.ParseIP(ip))
-		if dd != nil {
-			targetAddr = fmt.Sprintf("%v:%d", dd.Hostname, local.Port)
-		} else {
-			targetAddr = fmt.Sprintf("%v:%d", local.Addr.To4(), local.Port)
-		}
-		tcpTunnel, e := tunnel.NewTCP2Socks(wq, endpoint, "tcp", targetAddr)
+		ip := net.ParseIP(local.Addr.To4().String())
+		tcpTunnel, e := tunnel.NewTCP2Socks(wq, endpoint, ip, local.Port, fakeDns, proxies)
 		if e != nil {
 			log.Println("NewTCP2Socks tunnel failed", e, tcpTunnel)
 			endpoint.Close()

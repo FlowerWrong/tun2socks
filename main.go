@@ -14,9 +14,6 @@ import (
 	"time"
 )
 
-var cfg *configure.AppConfig
-var fakeDns *dns.Dns
-
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
@@ -34,8 +31,7 @@ func main() {
 		configFile = flag.Arg(0)
 	}
 	// parse config
-	var err error
-	cfg, err = configure.Parse(configFile)
+	cfg, err := configure.Parse(configFile)
 	tunnel.Socks5Addr, err = cfg.DefaultPorxy()
 	if err != nil {
 		log.Fatalln("Get default proxy failed", err)
@@ -45,14 +41,19 @@ func main() {
 	util.NewSignalHandler()
 
 	s, ifce, proto := netstack.NewNetstack(cfg)
-	fakeDns, err = dns.NewFakeDnsServer(cfg)
+	fakeDns, err := dns.NewFakeDnsServer(cfg)
 	if err != nil {
 		log.Fatal("new fake dns server failed", err)
 	}
 
+	proxies, err := configure.NewProxies(cfg.Proxy)
+	if err != nil {
+		log.Fatalln("New proxies failed", err)
+	}
+
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
-	go netstack.NewTCPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, fakeDns)
+	go netstack.NewTCPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, fakeDns, proxies)
 	waitGroup.Add(1)
 	go netstack.NewUDPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, ifce)
 	waitGroup.Add(1)
