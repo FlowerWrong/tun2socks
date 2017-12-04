@@ -184,30 +184,29 @@ func (d *Dns) Serve() error {
 
 func NewFakeDnsServer(cfg *configure.AppConfig) (*Dns, error) {
 	d := new(Dns)
+
 	server := &dns.Server{
 		Net:          "udp",
-		Addr:         fmt.Sprintf("%s:%d", net.IPv4zero, 53),
+		Addr:         fmt.Sprintf("%s:%d", net.IPv4zero, cfg.Dns.DnsPort),
 		Handler:      dns.HandlerFunc(d.handler),
-		UDPSize:      4096,
-		ReadTimeout:  time.Duration(5) * time.Second,
-		WriteTimeout: time.Duration(5) * time.Second,
+		UDPSize:      int(cfg.Dns.DnsPacketSize),
+		ReadTimeout:  time.Duration(cfg.Dns.DnsReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.Dns.DnsWriteTimeout) * time.Second,
 	}
 
 	client := &dns.Client{
 		Net:          "udp",
-		UDPSize:      4096,
-		ReadTimeout:  time.Duration(5) * time.Second,
-		WriteTimeout: time.Duration(5) * time.Second,
+		UDPSize:      cfg.Dns.DnsPacketSize,
+		ReadTimeout:  time.Duration(cfg.Dns.DnsReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.Dns.DnsWriteTimeout) * time.Second,
 	}
 
-	d.nameservers = append(d.nameservers, "114.114.114.114")
-	d.nameservers = append(d.nameservers, "223.5.5.5")
+	d.nameservers = cfg.Dns.Nameserver
 	d.server = server
 	d.client = client
 
 	var network = "10.192.0.1/16"
 	var ip, subnet, _ = net.ParseCIDR(network)
-	// var dnsIPPool = NewDnsIPPool(ip, subnet)
 	// new rule
 	d.rule = NewRule(cfg.Rule, cfg.Pattern)
 

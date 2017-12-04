@@ -55,8 +55,10 @@ func main() {
 	}
 	// parse config
 	cfg, err := configure.Parse(configFile)
-
-	tunnel.Socks5Addr = "127.0.0.1:1080"
+	tunnel.Socks5Addr, err = cfg.DefaultPorxy()
+	if err != nil {
+		log.Fatalln("Get default proxy failed", err)
+	}
 
 	// Parse the IP address. Support both ipv4 and ipv6.
 	parsedAddr := net.ParseIP(cfg.General.NetstackAddr)
@@ -98,8 +100,6 @@ func main() {
 	// Create the stack with ip and tcp protocols, then add a tun-based NIC and address.
 	s := stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
 
-	var mtu uint32 = 1500
-
 	ifce, fd, err := water.New(water.Config{
 		DeviceType: water.TUN,
 	})
@@ -109,7 +109,7 @@ func main() {
 	log.Printf("Interface Name: %s\n", ifce.Name())
 
 	if runtime.GOOS == "darwin" {
-		sargs := fmt.Sprintf("%s %s %s mtu %d netmask 255.255.255.0 up", ifce.Name(), cfg.General.NetstackAddr, cfg.General.NetstackAddr, mtu)
+		sargs := fmt.Sprintf("%s %s %s mtu %d netmask 255.255.255.0 up", ifce.Name(), cfg.General.NetstackAddr, cfg.General.NetstackAddr, cfg.General.Mtu)
 		if err := execCommand("/sbin/ifconfig", sargs); err != nil {
 			log.Fatal("execCommand failed", err)
 		}
@@ -122,7 +122,7 @@ func main() {
 		log.Fatal("Not support os")
 	}
 
-	linkID := fdbased.New(ifce, fd, mtu, nil)
+	linkID := fdbased.New(ifce, fd, cfg.General.Mtu, nil)
 	if err := s.CreateNIC(1, linkID, true, addr, cfg.General.NetstackPort); err != nil {
 		log.Fatal("Create NIC failed", err)
 	}

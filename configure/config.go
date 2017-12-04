@@ -1,6 +1,11 @@
 package configure
 
-import "gopkg.in/gcfg.v1"
+import (
+	"gopkg.in/gcfg.v1"
+	"github.com/pkg/errors"
+	"net/url"
+	"github.com/lunny/log"
+)
 
 const (
 	dnsDefaultPort         = 53
@@ -14,6 +19,7 @@ type GeneralConfig struct {
 	Network      string // tun network
 	NetstackAddr string `gcfg:"netstack-addr"`
 	NetstackPort uint16 `gcfg:"netstack-port"`
+	Mtu          uint32
 }
 
 type DnsConfig struct {
@@ -66,6 +72,7 @@ func Parse(filename string) (*AppConfig, error) {
 	cfg.General.Network = "10.192.0.1/16"
 	cfg.General.NetstackAddr = "10.192.0.2"
 	cfg.General.NetstackPort = 7777
+	cfg.General.Mtu = 1500
 
 	cfg.Dns.DnsPort = dnsDefaultPort
 	cfg.Dns.DnsTtl = dnsDefaultTtl
@@ -81,8 +88,8 @@ func Parse(filename string) (*AppConfig, error) {
 
 	// set backend dns default value
 	if len(cfg.Dns.Nameserver) == 0 {
-		cfg.Dns.Nameserver = append(cfg.Dns.Nameserver, "114.114.114.114")
-		cfg.Dns.Nameserver = append(cfg.Dns.Nameserver, "223.5.5.5")
+		cfg.Dns.Nameserver = append(cfg.Dns.Nameserver, "114.114.114.114:53")
+		cfg.Dns.Nameserver = append(cfg.Dns.Nameserver, "223.5.5.5:53")
 	}
 
 	err = cfg.check()
@@ -91,4 +98,20 @@ func Parse(filename string) (*AppConfig, error) {
 	}
 
 	return cfg, nil
+}
+
+// Get default proxy, eg: socks5://127.0.0.1:1080, return 127.0.0.1:1080
+func (cfg *AppConfig) DefaultPorxy() (string, error) {
+	for _, proxyConfig := range cfg.Proxy {
+		if proxyConfig.Default {
+			url, err := url.Parse(proxyConfig.Url)
+			if err != nil {
+				log.Println("Parse url failed", err)
+				break
+			}
+			return url.Host, nil
+		}
+	}
+
+	return "", errors.New("404")
 }
