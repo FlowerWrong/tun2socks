@@ -19,8 +19,8 @@ type Dns struct {
 	server      *dns.Server
 	client      *dns.Client
 	nameservers []string
-	rule        *Rule
-	dnsTable    *DnsTable
+	RulePtr     *Rule
+	DnsTablePtr *DnsTable
 }
 
 func isIPv4Query(q dns.Question) bool {
@@ -96,22 +96,22 @@ func (d *Dns) fillRealIP(record *DomainRecord, r *dns.Msg) {
 func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	domain := dnsutil.TrimDomainName(r.Question[0].Name, ".")
 	// if is a non-proxy-domain
-	if d.dnsTable.IsNonProxyDomain(domain) {
+	if d.DnsTablePtr.IsNonProxyDomain(domain) {
 		return d.resolve(r)
 	}
 
 	// if have already hijacked
-	record := d.dnsTable.Get(domain)
+	record := d.DnsTablePtr.Get(domain)
 	if record != nil {
 		return record.Answer(r), nil
 	}
 
 	// match by domain
-	matched, proxy := d.rule.Proxy(domain)
+	matched, proxy := d.RulePtr.Proxy(domain)
 
 	// if domain use proxy
 	if matched && proxy != "" {
-		if record := d.dnsTable.Set(domain, proxy); record != nil {
+		if record := d.DnsTablePtr.Set(domain, proxy); record != nil {
 			go d.fillRealIP(record, r)
 			return record.Answer(r), nil
 		}
@@ -130,11 +130,11 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 			switch answer := item.(type) {
 			case *dns.A:
 				// test ip
-				_, proxy = d.rule.Proxy(answer.A)
+				_, proxy = d.RulePtr.Proxy(answer.A)
 				break OuterLoop
 			case *dns.CNAME:
 				// test cname
-				matched, proxy = d.rule.Proxy(answer.Target)
+				matched, proxy = d.RulePtr.Proxy(answer.Target)
 				if matched && proxy != "" {
 					break OuterLoop
 				}
@@ -144,7 +144,7 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 		}
 		// if ip use proxy
 		if proxy != "" {
-			if record := d.dnsTable.Set(domain, proxy); record != nil {
+			if record := d.DnsTablePtr.Set(domain, proxy); record != nil {
 				record.SetRealIP(msg)
 				return record.Answer(r), nil
 			}
@@ -152,7 +152,7 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	}
 
 	// set domain as a non-proxy-domain
-	d.dnsTable.SetNonProxyDomain(domain, msg.Answer[0].Header().Ttl)
+	d.DnsTablePtr.SetNonProxyDomain(domain, msg.Answer[0].Header().Ttl)
 
 	// final
 	return msg, err
@@ -163,6 +163,8 @@ func (d *Dns) handler(w dns.ResponseWriter, r *dns.Msg) {
 
 	var msg *dns.Msg
 	var err error
+
+	log.Println(d.DnsTablePtr.records)
 
 	if isIPv4 {
 		msg, err = d.doIPv4Query(r)
@@ -205,13 +207,12 @@ func NewFakeDnsServer(cfg *configure.AppConfig) (*Dns, error) {
 	d.server = server
 	d.client = client
 
-	var network = "10.192.0.1/16"
-	var ip, subnet, _ = net.ParseCIDR(network)
-	// new rule
-	d.rule = NewRule(cfg.Rule, cfg.Pattern)
+	var ip, subnet, _ = net.ParseCIDR(cfg.General.Network)
+	// new RulePtr
+	d.RulePtr = NewRule(cfg.Rule, cfg.Pattern)
 
 	// new dns cache
-	d.dnsTable = NewDnsTable(ip, subnet)
+	d.DnsTablePtr = NewDnsTable(ip, subnet)
 
 	return d, nil
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip"
 	"log"
 	"golang.org/x/net/proxy"
-	"fmt"
 	"time"
 	"sync"
 )
@@ -28,13 +27,11 @@ type TcpTunnel struct {
 }
 
 // Create a tcp tunnel
-func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string) (*TcpTunnel, error) {
+func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, network string, targetAddr string) (*TcpTunnel, error) {
 	// connect to socks5
 	var socks5Conn net.Conn
-	local, _ := ep.GetLocalAddress()
-	targetAddr := fmt.Sprintf("%v:%d", local.Addr.To4(), local.Port)
-
 	if network == "tcp" {
+		log.Println(Socks5Addr)
 		dialer, err := proxy.SOCKS5(network, Socks5Addr, nil, proxy.Direct)
 		if err != nil {
 			log.Println("Create SOCKS5 failed", err)
@@ -77,6 +74,7 @@ func (tcpTunnel *TcpTunnel) Status() TunnelStatus {
 
 // Start tcp tunnel
 func (tcpTunnel *TcpTunnel) Run() {
+	log.Println("Start tcp tunnel")
 	tcpTunnel.ctx, tcpTunnel.ctxCancel = context.WithCancel(context.Background())
 	go tcpTunnel.writeToLocal()
 	go tcpTunnel.readFromRemote()

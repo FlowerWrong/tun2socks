@@ -12,7 +12,7 @@ type Rule struct {
 }
 
 func (rule *Rule) DirectDomain(domain string) {
-	log.Printf("[rule] add direct domain: %s", domain)
+	log.Printf("[RulePtr] add direct domain: %s", domain)
 	pattern := rule.patterns[0].(*DomainSuffixPattern)
 	pattern.AddDomain(domain)
 }
@@ -22,11 +22,11 @@ func (rule *Rule) Proxy(val interface{}) (bool, string) {
 	for _, pattern := range rule.patterns {
 		if pattern.Match(val) {
 			proxy := pattern.Proxy()
-			log.Printf("[rule] %v -> %s: proxy %q", val, pattern.Name(), proxy)
+			log.Printf("[RulePtr] %v -> %s: proxy %q", val, pattern.Name(), proxy)
 			return true, proxy
 		}
 	}
-	log.Printf("[rule] %v -> final: proxy %q", val, rule.final)
+	log.Printf("[RulePtr] %v -> final: proxy %q", val, rule.final)
 	return false, rule.final
 }
 
