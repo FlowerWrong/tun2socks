@@ -85,7 +85,6 @@ func (tcpTunnel *TcpTunnel) Status() TunnelStatus {
 
 // Start tcp tunnel
 func (tcpTunnel *TcpTunnel) Run() {
-	log.Println("Start tcp tunnel")
 	tcpTunnel.ctx, tcpTunnel.ctxCancel = context.WithCancel(context.Background())
 	go tcpTunnel.writeToLocal()
 	go tcpTunnel.readFromRemote()

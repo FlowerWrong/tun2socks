@@ -166,8 +166,6 @@ func (d *Dns) handler(w dns.ResponseWriter, r *dns.Msg) {
 	var msg *dns.Msg
 	var err error
 
-	log.Println(d.DnsTablePtr.records)
-
 	if isIPv4 {
 		msg, err = d.doIPv4Query(r)
 	} else {

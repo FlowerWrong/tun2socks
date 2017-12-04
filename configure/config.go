@@ -1,10 +1,10 @@
 package configure
 
 import (
+	"errors"
 	"gopkg.in/gcfg.v1"
-	"github.com/pkg/errors"
+	"log"
 	"net/url"
-	"github.com/lunny/log"
 )
 
 const (
