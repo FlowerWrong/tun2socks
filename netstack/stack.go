@@ -1,8 +1,6 @@
 package netstack
 
 import (
-	"fmt"
-	"runtime"
 	"strings"
 	"net"
 	"github.com/FlowerWrong/tun2socks/configure"
@@ -48,20 +46,7 @@ func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpi
 	}
 	log.Printf("Interface Name: %s\n", ifce.Name())
 
-	var ip, _, _ = net.ParseCIDR(cfg.General.Network)
-	if runtime.GOOS == "darwin" {
-		sargs := fmt.Sprintf("%s %s %s mtu %d netmask 255.255.255.0 up", ifce.Name(), ip.To4().String(), ip.To4().String(), cfg.General.Mtu)
-		if err := util.ExecCommand("/sbin/ifconfig", sargs); err != nil {
-			log.Fatal("execCommand failed", err)
-		}
-	} else if runtime.GOOS == "linux" {
-		sargs := fmt.Sprintf("%s %s netmask 255.255.255.0", ifce.Name(), ip.To4().String())
-		if err := util.ExecCommand("/sbin/ifconfig", sargs); err != nil {
-			log.Fatal("execCommand failed", err)
-		}
-	} else {
-		log.Fatal("Not support os")
-	}
+	util.Ifconfig(ifce.Name(), cfg.General.Network, cfg.General.Mtu)
 
 	linkID := fdbased.New(ifce, fd, cfg.General.Mtu, nil)
 	if err := s.CreateNIC(1, linkID, true, addr, cfg.General.NetstackPort); err != nil {

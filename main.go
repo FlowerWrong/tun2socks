@@ -51,6 +51,8 @@ func main() {
 		log.Fatalln("New proxies failed", err)
 	}
 
+	util.AddRoutes(cfg.Route.V, ifce)
+
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
 	go netstack.NewTCPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, fakeDns, proxies)
