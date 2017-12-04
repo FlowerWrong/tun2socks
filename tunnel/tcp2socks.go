@@ -51,10 +51,14 @@ func NewSocks5Conneciton(ip net.IP, port uint16, fakeDns *dns.Dns, proxies *conf
 	var remoteAddr string
 	proxy := ""
 
-	record := fakeDns.DnsTablePtr.GetByIP(ip)
-	if record != nil {
-		remoteAddr = fmt.Sprintf("%v:%d", record.Hostname, port)
-		proxy = record.Proxy
+	if fakeDns != nil {
+		record := fakeDns.DnsTablePtr.GetByIP(ip)
+		if record != nil {
+			remoteAddr = fmt.Sprintf("%v:%d", record.Hostname, port)
+			proxy = record.Proxy
+		} else {
+			remoteAddr = fmt.Sprintf("%v:%d", ip, port)
+		}
 	} else {
 		remoteAddr = fmt.Sprintf("%v:%d", ip, port)
 	}

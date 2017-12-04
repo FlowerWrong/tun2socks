@@ -2,14 +2,13 @@
 package dns
 
 import (
+	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/miekg/dns"
 	"log"
 	"net"
 	"sync"
 	"time"
 )
-
-const dnsDefaultTtl = 600
 
 // hijacked domain
 type DomainRecord struct {
@@ -51,7 +50,7 @@ func (record *DomainRecord) Answer(request *dns.Msg) *dns.Msg {
 
 func (record *DomainRecord) Touch() {
 	record.Hits++
-	record.Expires = time.Now().Add(dnsDefaultTtl * time.Second)
+	record.Expires = time.Now().Add(configure.DnsDefaultTtl * time.Second)
 }
 
 type DnsTable struct {
@@ -97,7 +96,7 @@ func (c *DnsTable) Get(domain string) *DomainRecord {
 // forge a IPv4 dns reply
 func forgeIPv4Answer(domain string, ip net.IP) *dns.A {
 	rr := new(dns.A)
-	rr.Hdr = dns.RR_Header{Name: dns.Fqdn(domain), Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: dnsDefaultTtl}
+	rr.Hdr = dns.RR_Header{Name: dns.Fqdn(domain), Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: configure.DnsDefaultTtl}
 	rr.A = ip.To4()
 	return rr
 }

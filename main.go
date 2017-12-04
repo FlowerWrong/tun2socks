@@ -5,7 +5,6 @@ import (
 	"github.com/FlowerWrong/tun2socks/configure"
 	"log"
 	"math/rand"
-	"github.com/FlowerWrong/tun2socks/tunnel"
 	"runtime"
 	"sync"
 	"github.com/FlowerWrong/tun2socks/dns"
@@ -32,7 +31,6 @@ func main() {
 	}
 	// parse config
 	cfg, err := configure.Parse(configFile)
-	tunnel.Socks5Addr, err = cfg.DefaultPorxy()
 	if err != nil {
 		log.Fatalln("Get default proxy failed", err)
 	}
@@ -41,9 +39,13 @@ func main() {
 	util.NewSignalHandler()
 
 	s, ifce, proto := netstack.NewNetstack(cfg)
-	fakeDns, err := dns.NewFakeDnsServer(cfg)
-	if err != nil {
-		log.Fatal("new fake dns server failed", err)
+
+	var fakeDns *dns.Dns
+	if cfg.Dns.DnsMode == "fake" {
+		fakeDns, err = dns.NewFakeDnsServer(cfg)
+		if err != nil {
+			log.Fatal("new fake dns server failed", err)
+		}
 	}
 
 	proxies, err := configure.NewProxies(cfg.Proxy)
@@ -57,11 +59,17 @@ func main() {
 	waitGroup.Add(1)
 	go netstack.NewTCPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, fakeDns, proxies)
 	waitGroup.Add(1)
-	go netstack.NewUDPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, ifce)
-	waitGroup.Add(1)
-	go func(waitGroup sync.WaitGroup, fakeDns *dns.Dns) {
-		fakeDns.Serve()
-		waitGroup.Done()
-	}(waitGroup, fakeDns)
+	dnsProxy, err := cfg.UdpProxy()
+	if err != nil {
+		log.Fatal("Get udp socks 5 proxy failed", err)
+	}
+	go netstack.NewUDPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, ifce, dnsProxy)
+	if cfg.Dns.DnsMode == "fake" {
+		waitGroup.Add(1)
+		go func(waitGroup sync.WaitGroup, fakeDns *dns.Dns) {
+			fakeDns.Serve()
+			waitGroup.Done()
+		}(waitGroup, fakeDns)
+	}
 	waitGroup.Wait()
 }

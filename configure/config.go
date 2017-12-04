@@ -8,11 +8,12 @@ import (
 )
 
 const (
-	dnsDefaultPort         = 53
-	dnsDefaultTtl          = 600
-	dnsDefaultPacketSize   = 4096
-	dnsDefaultReadTimeout  = 5
-	dnsDefaultWriteTimeout = 5
+	DnsDefaultPort         = 53
+	DnsDefaultTtl          = 600
+	DnsDefaultPacketSize   = 4096
+	DnsDefaultReadTimeout  = 5
+	DnsDefaultWriteTimeout = 5
+	DnsIPPoolMaxSpace      = 0x3ffff // 4*65535
 )
 
 type GeneralConfig struct {
@@ -23,6 +24,8 @@ type GeneralConfig struct {
 }
 
 type DnsConfig struct {
+	DnsMode         string `gcfg:"dns-mode"`
+	Proxy           string
 	DnsPort         uint16 `gcfg:"dns-port"`
 	DnsTtl          uint   `gcfg:"dns-ttl"`
 	DnsPacketSize   uint16 `gcfg:"dns-packet-size"`
@@ -74,11 +77,13 @@ func Parse(filename string) (*AppConfig, error) {
 	cfg.General.NetstackPort = 7777
 	cfg.General.Mtu = 1500
 
-	cfg.Dns.DnsPort = dnsDefaultPort
-	cfg.Dns.DnsTtl = dnsDefaultTtl
-	cfg.Dns.DnsPacketSize = dnsDefaultPacketSize
-	cfg.Dns.DnsReadTimeout = dnsDefaultReadTimeout
-	cfg.Dns.DnsWriteTimeout = dnsDefaultWriteTimeout
+	cfg.Dns.DnsMode = "fake"
+	cfg.Dns.Proxy = ""
+	cfg.Dns.DnsPort = DnsDefaultPort
+	cfg.Dns.DnsTtl = DnsDefaultTtl
+	cfg.Dns.DnsPacketSize = DnsDefaultPacketSize
+	cfg.Dns.DnsReadTimeout = DnsDefaultReadTimeout
+	cfg.Dns.DnsWriteTimeout = DnsDefaultWriteTimeout
 
 	// decode config value
 	err := gcfg.ReadFileInto(cfg, filename)
@@ -111,6 +116,27 @@ func (cfg *AppConfig) DefaultPorxy() (string, error) {
 			}
 			return url.Host, nil
 		}
+	}
+
+	return "", errors.New("404")
+}
+
+func (cfg *AppConfig) UdpProxy() (string, error) {
+	proxyConfig := cfg.Proxy[cfg.Dns.Proxy]
+	if proxyConfig == nil {
+		for _, pc := range cfg.Proxy {
+			if pc.Default {
+				proxyConfig = pc
+			}
+		}
+	}
+	if proxyConfig != nil {
+		url, err := url.Parse(proxyConfig.Url)
+		if err != nil {
+			log.Println("Parse url failed", err)
+			return "", err
+		}
+		return url.Host, nil
 	}
 
 	return "", errors.New("404")

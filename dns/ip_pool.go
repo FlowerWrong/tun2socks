@@ -3,13 +3,12 @@
 package dns
 
 import (
+	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/FlowerWrong/tun2socks/util"
 	"hash/adler32"
 	"log"
 	"net"
 )
-
-const DnsIPPoolMaxSpace = 0x3ffff // 4*65535
 
 type DnsIPPool struct {
 	base  uint32
@@ -65,8 +64,8 @@ func NewDnsIPPool(ip net.IP, subnet *net.IPNet) *DnsIPPool {
 
 	// space should not over 0x3ffff
 	space := max - base
-	if space > DnsIPPoolMaxSpace {
-		space = DnsIPPoolMaxSpace
+	if space > configure.DnsIPPoolMaxSpace {
+		space = configure.DnsIPPoolMaxSpace
 	}
 	flags := make([]bool, space)
 

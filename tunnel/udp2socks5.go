@@ -35,12 +35,12 @@ type UdpTunnel struct {
 }
 
 // Create a udp tunnel
-func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, ifce *water.Interface) (*UdpTunnel, error) {
+func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, ifce *water.Interface, dnsProxy string) (*UdpTunnel, error) {
 	localTcpSocks5Dialer := &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
 		Timeout: DefaultConnectDuration,
 	}
-	socks5TcpConn, err := localTcpSocks5Dialer.Dial(Socks5Addr)
+	socks5TcpConn, err := localTcpSocks5Dialer.Dial(dnsProxy)
 	if err != nil {
 		log.Println("Fail to connect SOCKS proxy ", err)
 		return nil, err
