@@ -44,7 +44,7 @@ func main() {
 	// signal handler
 	util.NewSignalHandler()
 
-	s, _, proto := netstack.NewNetstack(cfg)
+	s, ifce, proto := netstack.NewNetstack(cfg)
 	fakeDns, err = dns.NewFakeDnsServer(cfg)
 	if err != nil {
 		log.Fatal("new fake dns server failed", err)
@@ -53,8 +53,8 @@ func main() {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
 	go netstack.NewTCPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, fakeDns)
-	//waitGroup.Add(1)
-	//go netstack.NewUDPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, ifce)
+	waitGroup.Add(1)
+	go netstack.NewUDPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, ifce)
 	waitGroup.Add(1)
 	go func(waitGroup sync.WaitGroup, fakeDns *dns.Dns) {
 		fakeDns.Serve()
