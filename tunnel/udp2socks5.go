@@ -34,6 +34,7 @@ type UdpTunnel struct {
 	status               TunnelStatus // to avoid panic: send on closed channel
 	rwMutex              sync.RWMutex
 	fakeDns              *dns.Dns
+	cfg                  *configure.AppConfig
 }
 
 // Create a udp tunnel
@@ -115,6 +116,7 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		ifce:                 ifce,
 		cmdUDPAssociateReply: cmdUDPAssociateReply,
 		fakeDns:              fakeDns,
+		cfg:                  cfg,
 	}, nil
 }
 
@@ -237,11 +239,13 @@ writeToLocal:
 				log.Println("Write to tun failed", err)
 			} else {
 				// cache dns packet
-				end := time.Now()
-				ms := end.Sub(start).Nanoseconds() / 1000000
-				log.Printf("DNS session response received: %d ms", ms)
-				if dns.DNSCache != nil {
-					dns.DNSCache.Store(chunk)
+				if udpTunnel.cfg.Dns.DnsMode == "udp_relay_via_socks5" {
+					end := time.Now()
+					ms := end.Sub(start).Nanoseconds() / 1000000
+					log.Printf("DNS session response received: %d ms", ms)
+					if dns.DNSCache != nil {
+						dns.DNSCache.Store(chunk)
+					}
 				}
 			}
 			if err != nil {

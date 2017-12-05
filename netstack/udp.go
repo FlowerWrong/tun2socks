@@ -48,24 +48,26 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 
 		log.Println("There are", len(udp.UDPNatList.Data), "UDP connections")
 		endpoint := udp.UDPNatList.GetUDPNat(localAddr.Port)
-		remoteHost := endpoint.LocalAddress.To4().String()
-		remotePort := endpoint.LocalPort
 
-		answer := dns.DNSCache.Query(v)
-		if answer != nil {
-			data, err := answer.Pack()
-			if err == nil {
-				pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(localAddr.Addr.To4().String()), localAddr.Port, data)
-				if pkt == nil {
-					continue
-				}
-				_, err := ifce.Write(pkt)
-				if err != nil {
-					log.Println("Write to tun failed", err)
-				} else {
-					log.Println("Use dns cache")
-					udp.UDPNatList.DelUDPNat(localAddr.Port)
-					continue
+		if cfg.Dns.DnsMode == "udp_relay_via_socks5" {
+			answer := dns.DNSCache.Query(v)
+			if answer != nil {
+				data, err := answer.Pack()
+				if err == nil {
+					remoteHost := endpoint.LocalAddress.To4().String()
+					remotePort := endpoint.LocalPort
+					pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(localAddr.Addr.To4().String()), localAddr.Port, data)
+					if pkt == nil {
+						continue
+					}
+					_, err := ifce.Write(pkt)
+					if err != nil {
+						log.Println("Write to tun failed", err)
+					} else {
+						log.Println("Use dns cache")
+						udp.UDPNatList.DelUDPNat(localAddr.Port)
+						continue
+					}
 				}
 			}
 		}
