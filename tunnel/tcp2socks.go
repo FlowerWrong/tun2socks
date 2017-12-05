@@ -191,8 +191,6 @@ readFromRemote:
 			break readFromRemote
 		default:
 			buf := make([]byte, BuffSize)
-			// 30s timeout
-			tcpTunnel.remoteConn.SetReadDeadline(DefaultReadWriteTimeout)
 			n, err := tcpTunnel.remoteConn.Read(buf)
 			if err != nil {
 				if !util.IsEOF(err) {
