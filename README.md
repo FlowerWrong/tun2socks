@@ -2,7 +2,10 @@
 
 ## How to use it?
 
-NO, it is not useable.
+```
+cp config.example.ini config.ini
+sudo go run main.go --config=config.ini
+```
 
 ## Known bugs
 
@@ -11,9 +14,10 @@ NO, it is not useable.
 
 ## TODO
 
+* [ ] log
+* [ ] tunnel remained buf
 * [ ] less buf copy
 * [ ] windows support
-* [ ] tunnel remained buf
 
 ## Thanks
 
