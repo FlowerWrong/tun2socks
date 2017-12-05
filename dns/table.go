@@ -37,7 +37,6 @@ func (record *DomainRecord) SetRealIP(msg *dns.Msg) {
 		}
 	}
 	record.RealIP = ip
-	log.Printf("[dns] %s real ip: %s", record.Hostname, ip)
 }
 
 func (record *DomainRecord) Answer(request *dns.Msg) *dns.Msg {
@@ -141,7 +140,6 @@ func (c *DnsTable) SetNonProxyDomain(domain string, ttl uint32) {
 	c.npdLock.Lock()
 	defer c.npdLock.Unlock()
 	c.nonProxyDomains[domain] = time.Now().Add(time.Duration(ttl) * time.Second)
-	log.Printf("[dns] set non proxy domain: %s, ttl: %d", domain, ttl)
 }
 
 func (c *DnsTable) clearExpiredNonProxyDomain(now time.Time) {
@@ -175,7 +173,6 @@ func (c *DnsTable) clearExpiredDomain(now time.Time) {
 		delete(c.records, domain)
 		delete(c.ip2Domain, record.IP.String())
 		c.ipPool.Release(record.IP)
-		log.Printf("[dns] release %s -> %s, hit: %d", domain, record.IP.String(), record.Hits)
 	}
 }
 

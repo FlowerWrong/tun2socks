@@ -46,7 +46,6 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 			continue
 		}
 
-		log.Println("There are", len(udp.UDPNatList.Data), "UDP connections")
 		endpoint := udp.UDPNatList.GetUDPNat(localAddr.Port)
 
 		if cfg.Dns.DnsMode == "udp_relay_via_socks5" {

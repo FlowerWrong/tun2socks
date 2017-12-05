@@ -8,10 +8,10 @@ import (
 	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/FlowerWrong/tun2socks/dns"
+	"github.com/FlowerWrong/tun2socks/util"
 	"log"
 	"net"
 	"sync"
-	"time"
 )
 
 // Tcp tunnel
@@ -113,14 +113,10 @@ readFromLocal:
 					break readFromLocal
 				case <-notifyCh:
 					continue readFromLocal
-				case <-time.After(DefaultReadWriteDuration):
-					log.Println("Read from local timeout", err)
-					tcpTunnel.Close(errors.New("read from tun timeout"))
-					break readFromLocal
 				}
 			}
 			log.Println("Read from local failed", err)
-			tcpTunnel.Close(errors.New("Read from local failed" + err.String()))
+			tcpTunnel.Close(errors.New("read from local failed" + err.String()))
 			break readFromLocal
 		}
 		if tcpTunnel.status != StatusClosed {
@@ -141,8 +137,8 @@ writeToRemote:
 		case chunk := <-tcpTunnel.localPackets:
 			// tcpTunnel.socks5Conn.SetWriteDeadline(DefaultReadWriteTimeout)
 			_, err := tcpTunnel.socks5Conn.Write(chunk)
-			if err != nil {
-				log.Println(err)
+			if err != nil && !util.IsEOF(err) {
+				log.Println("Write packet to remote failed", err)
 				tcpTunnel.Close(err)
 				break writeToRemote
 			}
@@ -161,7 +157,7 @@ readFromRemote:
 			buf := make([]byte, 1500)
 			// tcpTunnel.socks5Conn.SetReadDeadline(DefaultReadWriteTimeout)
 			n, err := tcpTunnel.socks5Conn.Read(buf)
-			if err != nil {
+			if err != nil && !util.IsEOF(err) {
 				log.Println("Read from remote failed", err)
 				tcpTunnel.Close(err)
 				break readFromRemote

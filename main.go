@@ -72,6 +72,12 @@ func main() {
 			fakeDns.Serve()
 			waitGroup.Done()
 		}(waitGroup, fakeDns)
+
+		waitGroup.Add(1)
+		go func(waitGroup sync.WaitGroup, fakeDns *dns.Dns) {
+			fakeDns.DnsTablePtr.Serve()
+			waitGroup.Done()
+		}(waitGroup, fakeDns)
 	}
 	waitGroup.Wait()
 }

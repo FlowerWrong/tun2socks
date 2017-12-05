@@ -41,7 +41,7 @@ func (d *Dns) resolve(r *dns.Msg) (*dns.Msg, error) {
 	Q := func(ns string) {
 		defer wg.Done()
 
-		r, rtt, err := d.client.Exchange(r, ns)
+		r, _, err := d.client.Exchange(r, ns)
 		if err != nil {
 			log.Printf("[dns] resolve %s on %s failed: %v", qname, ns, err)
 			return
@@ -51,8 +51,6 @@ func (d *Dns) resolve(r *dns.Msg) (*dns.Msg, error) {
 			log.Printf("[dns] resolve %s on %s failed: code %d", qname, ns, r.Rcode)
 			return
 		}
-
-		log.Printf("[dns] resolve %s on %s, code: %d, rtt: %d", qname, ns, r.Rcode, rtt)
 
 		select {
 		case msgCh <- r:
