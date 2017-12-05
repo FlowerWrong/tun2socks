@@ -12,10 +12,11 @@ import (
 	"log"
 	"github.com/FlowerWrong/tun2socks/dns"
 	"github.com/FlowerWrong/tun2socks/util"
+	"github.com/FlowerWrong/tun2socks/configure"
 )
 
 // Create UDP endpoint, bind it, then start listening.
-func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber, localPort int, waitGroup sync.WaitGroup, ifce *water.Interface, dnsProxy string) {
+func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber, localPort int, waitGroup sync.WaitGroup, ifce *water.Interface, dnsProxy string, fakeDns *dns.Dns, cfg *configure.AppConfig) {
 	var wq waiter.Queue
 	ep, e := s.NewEndpoint(udp.ProtocolNumber, proto, &wq)
 	if e != nil {
@@ -69,7 +70,7 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 			}
 		}
 
-		udpTunnel, e := tunnel.NewUdpTunnel(endpoint, localAddr, ifce, dnsProxy)
+		udpTunnel, e := tunnel.NewUdpTunnel(endpoint, localAddr, ifce, dnsProxy, fakeDns, cfg)
 		if e != nil {
 			log.Println("NewUdpTunnel failed", e)
 			udp.UDPNatList.DelUDPNat(localAddr.Port)

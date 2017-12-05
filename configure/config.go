@@ -54,7 +54,8 @@ type ProxyConfig struct {
 }
 
 type UdpConfig struct {
-	Proxy string
+	Proxy   string
+	Enabled bool
 }
 
 type AppConfig struct {
@@ -88,6 +89,8 @@ func Parse(filename string) (*AppConfig, error) {
 	cfg.Dns.DnsReadTimeout = DnsDefaultReadTimeout
 	cfg.Dns.DnsWriteTimeout = DnsDefaultWriteTimeout
 
+	cfg.Udp.Enabled = true
+
 	// decode config value
 	err := gcfg.ReadFileInto(cfg, filename)
 	if err != nil {
@@ -108,7 +111,18 @@ func Parse(filename string) (*AppConfig, error) {
 	return cfg, nil
 }
 
-// Get default proxy, eg: socks5://127.0.0.1:1080, return 127.0.0.1:1080
+// Get proxy addr from name
+func (cfg *AppConfig) GetProxy(name string) string {
+	proxyConfig := cfg.Proxy[name]
+	url, err := url.Parse(proxyConfig.Url)
+	if err != nil {
+		log.Println("Parse url failed", err)
+		return ""
+	}
+	return url.Host
+}
+
+// Get default proxy addr, eg: socks5://127.0.0.1:1080, return 127.0.0.1:1080
 func (cfg *AppConfig) DefaultPorxy() (string, error) {
 	proxyConfig := cfg.DefaultPorxyConfig()
 	url, err := url.Parse(proxyConfig.Url)

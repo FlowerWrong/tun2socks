@@ -15,6 +15,7 @@ import (
 	"github.com/yinghuocho/gosocks"
 	"time"
 	"github.com/FlowerWrong/tun2socks/dns"
+	"github.com/FlowerWrong/tun2socks/configure"
 )
 
 // Udp tunnel
@@ -32,15 +33,31 @@ type UdpTunnel struct {
 	closeOne             sync.Once
 	status               TunnelStatus // to avoid panic: send on closed channel
 	rwMutex              sync.RWMutex
+	fakeDns              *dns.Dns
 }
 
 // Create a udp tunnel
-func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, ifce *water.Interface, dnsProxy string) (*UdpTunnel, error) {
+func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, ifce *water.Interface, dnsProxy string, fakeDns *dns.Dns, cfg *configure.AppConfig) (*UdpTunnel, error) {
 	localTcpSocks5Dialer := &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
 		Timeout: DefaultConnectDuration,
 	}
-	socks5TcpConn, err := localTcpSocks5Dialer.Dial(dnsProxy)
+
+	remoteHost := endpoint.LocalAddress.To4().String()
+	proxy := ""
+	if fakeDns != nil {
+		ip := net.ParseIP(remoteHost)
+		record := fakeDns.DnsTablePtr.GetByIP(ip)
+		if record != nil {
+			proxy = cfg.GetProxy(record.Proxy)
+		}
+	}
+
+	if proxy == "" {
+		proxy = dnsProxy
+	}
+
+	socks5TcpConn, err := localTcpSocks5Dialer.Dial(proxy)
 	if err != nil {
 		log.Println("Fail to connect SOCKS proxy ", err)
 		return nil, err
@@ -97,6 +114,7 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		localAddr:            localAddr,
 		ifce:                 ifce,
 		cmdUDPAssociateReply: cmdUDPAssociateReply,
+		fakeDns:              fakeDns,
 	}, nil
 }
 
@@ -134,9 +152,20 @@ writeToRemote:
 		case chunk := <-udpTunnel.LocalPackets:
 			remoteHost := udpTunnel.endpoint.LocalAddress.To4().String()
 			remotePort := udpTunnel.endpoint.LocalPort
+
+			var hostType byte = gosocks.SocksIPv4Host
+			if udpTunnel.fakeDns != nil {
+				ip := net.ParseIP(remoteHost)
+				record := udpTunnel.fakeDns.DnsTablePtr.GetByIP(ip)
+				if record != nil {
+					remoteHost = record.Hostname
+					hostType = gosocks.SocksDomainHost
+				}
+			}
+
 			req := &gosocks.UDPRequest{
 				Frag:     0,
-				HostType: gosocks.SocksIPv4Host,
+				HostType: hostType,
 				DstHost:  remoteHost,
 				DstPort:  remotePort,
 				Data:     chunk,
@@ -167,8 +196,14 @@ readFromRemote:
 			if n > 0 {
 				udpBuf := make([]byte, n)
 				copy(udpBuf, udpSocks5Buf[:n])
+				udpReq, err := gosocks.ParseUDPRequest(udpBuf)
+				if err != nil {
+					log.Println("Parse UDP reply data frailed", err)
+					udpTunnel.Close(err)
+					break readFromRemote
+				}
 				if udpTunnel.status != StatusClosed {
-					udpTunnel.RemotePackets <- udpBuf[10:]
+					udpTunnel.RemotePackets <- udpReq.Data
 				}
 			}
 			if err != nil {

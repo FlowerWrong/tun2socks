@@ -58,12 +58,14 @@ func main() {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
 	go netstack.NewTCPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, fakeDns, proxies)
-	waitGroup.Add(1)
-	dnsProxy, err := cfg.UdpProxy()
-	if err != nil {
-		log.Fatal("Get udp socks 5 proxy failed", err)
+	if cfg.Udp.Enabled {
+		waitGroup.Add(1)
+		dnsProxy, err := cfg.UdpProxy()
+		if err != nil {
+			log.Fatal("Get udp socks 5 proxy failed", err)
+		}
+		go netstack.NewUDPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, ifce, dnsProxy, fakeDns, cfg)
 	}
-	go netstack.NewUDPEndpointAndListenIt(s, proto, int(cfg.General.NetstackPort), waitGroup, ifce, dnsProxy)
 	if cfg.Dns.DnsMode == "fake" {
 		waitGroup.Add(1)
 		go func(waitGroup sync.WaitGroup, fakeDns *dns.Dns) {
