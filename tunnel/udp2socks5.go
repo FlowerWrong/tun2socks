@@ -172,7 +172,7 @@ writeToRemote:
 			}
 			// udpTunnel.udpSocks5Listen.SetWriteDeadline(DefaultReadWriteTimeout)
 			_, err := udpTunnel.udpSocks5Listen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
-			if err != nil {
+			if err != nil && !util.IsEOF(err) {
 				log.Println("WriteTo UDP tunnel failed", err)
 				udpTunnel.Close(err)
 				break writeToRemote
@@ -205,7 +205,7 @@ readFromRemote:
 					udpTunnel.RemotePackets <- udpReq.Data
 				}
 			}
-			if err != nil {
+			if err != nil && !util.IsEOF(err) {
 				log.Println("ReadFromUDP tunnel failed", err)
 				udpTunnel.Close(err)
 				break readFromRemote
