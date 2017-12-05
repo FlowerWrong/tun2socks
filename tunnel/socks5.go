@@ -19,5 +19,5 @@ const (
 	StatusClosed                               // 7
 )
 
-var BuffSize = 1500
+const BuffSize = 1500
 var PktChannelSize = BuffSize * 64

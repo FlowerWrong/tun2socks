@@ -191,13 +191,11 @@ readFromRemote:
 		case <-udpTunnel.ctx.Done():
 			break readFromRemote
 		default:
-			var udpSocks5Buf [4096]byte
+			var udpSocks5Buf [BuffSize]byte
 			// udpTunnel.socks5UdpListen.SetReadDeadline(WithoutTimeout)
-			n, _, err := udpTunnel.socks5UdpListen.ReadFromUDP(udpSocks5Buf[:])
+			n, _, err := udpTunnel.socks5UdpListen.ReadFromUDP(udpSocks5Buf[0:])
 			if n > 0 {
-				udpBuf := make([]byte, n)
-				copy(udpBuf, udpSocks5Buf[:n])
-				udpReq, err := gosocks.ParseUDPRequest(udpBuf)
+				udpReq, err := gosocks.ParseUDPRequest(udpSocks5Buf[0:n])
 				if err != nil {
 					log.Println("Parse UDP reply data frailed", err)
 					udpTunnel.Close(err)
