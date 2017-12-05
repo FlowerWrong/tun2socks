@@ -1,10 +1,10 @@
 package dns
 
 import (
-	"time"
-	"sync"
 	"github.com/miekg/dns"
 	"log"
+	"sync"
+	"time"
 )
 
 type dnsCacheEntry struct {
@@ -74,11 +74,11 @@ func (c *dnsCache) Store(payload []byte) {
 		return
 	}
 	if dnsMsg.Rcode != dns.RcodeSuccess {
-		log.Println("RcodeSuccess failed")
+		log.Println("dnsMsg.Rcode not success")
 		return
 	}
 	if len(dnsMsg.Question) == 0 || len(dnsMsg.Answer) == 0 {
-		log.Println("Question or Answer failed")
+		log.Println("Question or Answer error")
 		return
 	}
 

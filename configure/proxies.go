@@ -3,9 +3,9 @@ package configure
 import (
 	"errors"
 	"fmt"
-	"net"
 	"github.com/xjdrew/proxy"
 	"log"
+	"net"
 )
 
 var errNoProxy = errors.New("no proxy")
@@ -24,7 +24,7 @@ func (p *Proxies) Dial(proxy string, addr string) (net.Conn, error) {
 	if dialer != nil {
 		return dialer.Dial("tcp", addr)
 	}
-	return nil, fmt.Errorf("Invalid proxy: %s", proxy)
+	return nil, fmt.Errorf("invalid proxy: %s", proxy)
 }
 
 func (p *Proxies) DefaultDial(addr string) (net.Conn, error) {

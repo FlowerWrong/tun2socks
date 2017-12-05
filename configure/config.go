@@ -24,12 +24,12 @@ type GeneralConfig struct {
 }
 
 type DnsConfig struct {
-	DnsMode         string `gcfg:"dns-mode"`
-	DnsPort         uint16 `gcfg:"dns-port"`
-	DnsTtl          uint   `gcfg:"dns-ttl"`
-	DnsPacketSize   uint16 `gcfg:"dns-packet-size"`
-	DnsReadTimeout  uint   `gcfg:"dns-read-timeout"`
-	DnsWriteTimeout uint   `gcfg:"dns-write-timeout"`
+	DnsMode         string   `gcfg:"dns-mode"`
+	DnsPort         uint16   `gcfg:"dns-port"`
+	DnsTtl          uint     `gcfg:"dns-ttl"`
+	DnsPacketSize   uint16   `gcfg:"dns-packet-size"`
+	DnsReadTimeout  uint     `gcfg:"dns-read-timeout"`
+	DnsWriteTimeout uint     `gcfg:"dns-write-timeout"`
 	Nameserver      []string // backend dns
 }
 
@@ -125,12 +125,12 @@ func (cfg *AppConfig) GetProxy(name string) string {
 // Get default proxy addr, eg: socks5://127.0.0.1:1080, return 127.0.0.1:1080
 func (cfg *AppConfig) DefaultPorxy() (string, error) {
 	proxyConfig := cfg.DefaultPorxyConfig()
-	url, err := url.Parse(proxyConfig.Url)
+	u, err := url.Parse(proxyConfig.Url)
 	if err != nil {
 		log.Println("Parse url failed", err)
 		return "", err
 	}
-	return url.Host, nil
+	return u.Host, nil
 }
 
 func (cfg *AppConfig) DefaultPorxyConfig() *ProxyConfig {
@@ -148,12 +148,12 @@ func (cfg *AppConfig) UdpProxy() (string, error) {
 		proxyConfig = cfg.DefaultPorxyConfig()
 	}
 	if proxyConfig != nil {
-		url, err := url.Parse(proxyConfig.Url)
+		u, err := url.Parse(proxyConfig.Url)
 		if err != nil {
 			log.Println("Parse url failed", err)
 			return "", err
 		}
-		return url.Host, nil
+		return u.Host, nil
 	}
 
 	return "", errors.New("404")

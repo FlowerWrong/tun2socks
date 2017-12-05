@@ -3,16 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
-	"log"
 )
 
 func main() {
 	var host = flag.String("host", "localhost", "host")
 	var port = flag.String("port", "6666", "port")
 	flag.Parse()
-	addr, err := net.ResolveUDPAddr("udp", *host + ":" + *port)
+	addr, err := net.ResolveUDPAddr("udp", *host+":"+*port)
 	if err != nil {
 		log.Println("Can't resolve address:", err)
 		os.Exit(1)

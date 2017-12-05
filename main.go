@@ -3,13 +3,13 @@ package main
 import (
 	"flag"
 	"github.com/FlowerWrong/tun2socks/configure"
+	"github.com/FlowerWrong/tun2socks/dns"
+	"github.com/FlowerWrong/tun2socks/netstack"
+	"github.com/FlowerWrong/tun2socks/util"
 	"log"
 	"math/rand"
 	"runtime"
 	"sync"
-	"github.com/FlowerWrong/tun2socks/dns"
-	"github.com/FlowerWrong/tun2socks/netstack"
-	"github.com/FlowerWrong/tun2socks/util"
 	"time"
 )
 
@@ -32,7 +32,7 @@ func main() {
 	// parse config
 	cfg, err := configure.Parse(configFile)
 	if err != nil {
-		log.Fatalln("Get default proxy failed", err)
+		log.Fatal("Get default proxy failed", err)
 	}
 
 	// signal handler
@@ -44,7 +44,7 @@ func main() {
 	if cfg.Dns.DnsMode == "fake" {
 		fakeDns, err = dns.NewFakeDnsServer(cfg)
 		if err != nil {
-			log.Fatal("new fake dns server failed", err)
+			log.Fatal("New fake dns server failed", err)
 		}
 	}
 

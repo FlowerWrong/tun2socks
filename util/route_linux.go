@@ -1,8 +1,8 @@
 package util
 
 import (
-	"net"
 	"fmt"
+	"net"
 )
 
 // Add route

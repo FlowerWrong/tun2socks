@@ -1,18 +1,18 @@
 package netstack
 
 import (
-	"sync"
-	"net"
-	"github.com/FlowerWrong/tun2socks/tunnel"
-	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip"
-	"github.com/FlowerWrong/water"
-	"github.com/FlowerWrong/netstack/waiter"
+	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
-	"log"
-	"github.com/FlowerWrong/tun2socks/dns"
-	"github.com/FlowerWrong/tun2socks/util"
+	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/tun2socks/configure"
+	"github.com/FlowerWrong/tun2socks/dns"
+	"github.com/FlowerWrong/tun2socks/tunnel"
+	"github.com/FlowerWrong/tun2socks/util"
+	"github.com/FlowerWrong/water"
+	"log"
+	"net"
+	"sync"
 )
 
 // Create UDP endpoint, bind it, then start listening.
@@ -25,7 +25,7 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 	defer ep.Close()
 	defer waitGroup.Done()
 	if err := ep.Bind(tcpip.FullAddress{0, "", uint16(localPort)}, nil); err != nil {
-		log.Fatal("Bind failed: ", err)
+		log.Fatal("Bind failed", err)
 	}
 
 	// Wait for connections to appear.
@@ -41,7 +41,7 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 				<-notifyCh
 				continue
 			}
-			log.Println("Read failed:", err)
+			log.Println("Read from netstack failed", err)
 			udp.UDPNatList.DelUDPNat(localAddr.Port)
 			continue
 		}
@@ -64,7 +64,6 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 					if err != nil {
 						log.Println("Write to tun failed", err)
 					} else {
-						log.Println("Use dns cache")
 						udp.UDPNatList.DelUDPNat(localAddr.Port)
 						continue
 					}

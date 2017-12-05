@@ -7,12 +7,12 @@ import (
 	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/miekg/dns"
 	"github.com/miekg/dns/dnsutil"
+	"github.com/xjdrew/proxy"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
-	"strings"
-	"github.com/xjdrew/proxy"
 )
 
 var resolveErr = errors.New("resolve error")
@@ -43,16 +43,16 @@ func (d *Dns) resolve(r *dns.Msg) (*dns.Msg, error) {
 
 		r, rtt, err := d.client.Exchange(r, ns)
 		if err != nil {
-			log.Println("[dns] resolve %s on %s failed: %v", qname, ns, err)
+			log.Printf("[dns] resolve %s on %s failed: %v", qname, ns, err)
 			return
 		}
 
 		if r.Rcode == dns.RcodeServerFailure {
-			log.Println("[dns] resolve %s on %s failed: code %d", qname, ns, r.Rcode)
+			log.Printf("[dns] resolve %s on %s failed: code %d", qname, ns, r.Rcode)
 			return
 		}
 
-		log.Println("[dns] resolve %s on %s, code: %d, rtt: %d", qname, ns, r.Rcode, rtt)
+		log.Printf("[dns] resolve %s on %s, code: %d, rtt: %d", qname, ns, r.Rcode, rtt)
 
 		select {
 		case msgCh <- r:
@@ -81,7 +81,7 @@ func (d *Dns) resolve(r *dns.Msg) (*dns.Msg, error) {
 	case r := <-msgCh:
 		return r, nil
 	default:
-		log.Println("[dns] query %s failed", qname)
+		log.Printf("[dns] query %s failed", qname)
 		return nil, resolveErr
 	}
 }
@@ -141,7 +141,7 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 					break OuterLoop
 				}
 			default:
-				log.Println("[dns] unexpected response %s -> %v", domain, item)
+				log.Printf("[dns] unexpected response %s -> %v", domain, item)
 			}
 		}
 		// if ip use proxy

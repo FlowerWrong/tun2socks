@@ -1,19 +1,19 @@
 package netstack
 
 import (
-	"strings"
-	"net"
-	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/link/fdbased"
 	"github.com/FlowerWrong/netstack/tcpip/network/ipv4"
 	"github.com/FlowerWrong/netstack/tcpip/network/ipv6"
-	"log"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
-	"github.com/FlowerWrong/water"
+	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/FlowerWrong/tun2socks/util"
+	"github.com/FlowerWrong/water"
+	"log"
+	"net"
+	"strings"
 )
 
 func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpip.NetworkProtocolNumber) {
@@ -44,7 +44,7 @@ func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpi
 	if err != nil {
 		log.Fatal("Create tun interface failed", err)
 	}
-	log.Printf("Interface Name: %s\n", ifce.Name())
+	log.Println("Interface Name:", ifce.Name())
 
 	util.Ifconfig(ifce.Name(), cfg.General.Network, cfg.General.Mtu)
 
@@ -54,7 +54,7 @@ func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpi
 	}
 
 	if err := s.AddAddress(1, proto, addr); err != nil {
-		log.Fatal("Add address failed", err)
+		log.Fatal("Add address to stack failed", err)
 	}
 
 	// Add default route.

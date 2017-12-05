@@ -11,11 +11,10 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
+	"github.com/FlowerWrong/tun2socks/configure"
+	"github.com/FlowerWrong/tun2socks/dns"
 	"github.com/FlowerWrong/water"
 	"github.com/yinghuocho/gosocks"
-	"time"
-	"github.com/FlowerWrong/tun2socks/dns"
-	"github.com/FlowerWrong/tun2socks/configure"
 )
 
 // Udp tunnel
@@ -149,7 +148,6 @@ writeToRemote:
 	for {
 		select {
 		case <-udpTunnel.ctx.Done():
-			log.Printf("writeToRemote done because of '%s'", udpTunnel.ctx.Err())
 			break writeToRemote
 		case chunk := <-udpTunnel.LocalPackets:
 			remoteHost := udpTunnel.endpoint.LocalAddress.To4().String()
@@ -189,7 +187,6 @@ readFromRemote:
 	for {
 		select {
 		case <-udpTunnel.ctx.Done():
-			log.Printf("readFromRemote done because of '%s'", udpTunnel.ctx.Err())
 			break readFromRemote
 		default:
 			var udpSocks5Buf [4096]byte
@@ -219,12 +216,10 @@ readFromRemote:
 
 // Write upstream udp packet to local
 func (udpTunnel *UdpTunnel) writeToLocal() {
-	start := time.Now()
 writeToLocal:
 	for {
 		select {
 		case <-udpTunnel.ctx.Done():
-			log.Printf("WriteToRemote done because of '%s'", udpTunnel.ctx.Err())
 			break writeToLocal
 		case chunk := <-udpTunnel.RemotePackets:
 			remoteHost := udpTunnel.endpoint.LocalAddress.To4().String()
@@ -240,9 +235,6 @@ writeToLocal:
 			} else {
 				// cache dns packet
 				if udpTunnel.cfg.Dns.DnsMode == "udp_relay_via_socks5" {
-					end := time.Now()
-					ms := end.Sub(start).Nanoseconds() / 1000000
-					log.Printf("DNS session response received: %d ms", ms)
 					if dns.DNSCache != nil {
 						dns.DNSCache.Store(chunk)
 					}
@@ -262,17 +254,10 @@ writeToLocal:
 // Close this udp tunnel
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		log.Println("Close UDP tunnel because", reason.Error())
 		udpTunnel.SetStatus(StatusClosed)
 		udpTunnel.ctxCancel()
-		err := udpTunnel.socks5TcpConn.Close()
-		if err != nil {
-			log.Println("Close socks5TcpConn falied", err)
-		}
-		err = udpTunnel.udpSocks5Listen.Close()
-		if err != nil {
-			log.Println("Close udpSocks5Listen falied", err)
-		}
+		udpTunnel.socks5TcpConn.Close()
+		udpTunnel.udpSocks5Listen.Close()
 		udp.UDPNatList.DelUDPNat(udpTunnel.localAddr.Port)
 		close(udpTunnel.LocalPackets)
 		close(udpTunnel.RemotePackets)

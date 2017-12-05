@@ -1,9 +1,9 @@
 package util
 
 import (
+	"github.com/FlowerWrong/water"
 	"log"
 	"net"
-	"github.com/FlowerWrong/water"
 )
 
 func AddRoutes(vals []string, ifce *water.Interface) {

@@ -1,16 +1,16 @@
 package netstack
 
 import (
-	"sync"
-	"net"
-	"github.com/FlowerWrong/tun2socks/tunnel"
-	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip"
-	"github.com/FlowerWrong/tun2socks/dns"
-	"github.com/FlowerWrong/netstack/waiter"
+	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
-	"log"
+	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/tun2socks/configure"
+	"github.com/FlowerWrong/tun2socks/dns"
+	"github.com/FlowerWrong/tun2socks/tunnel"
+	"log"
+	"net"
+	"sync"
 )
 
 // Create TCP endpoint, bind it, then start listening.
@@ -24,10 +24,10 @@ func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 	defer ep.Close()
 	defer waitGroup.Done()
 	if err := ep.Bind(tcpip.FullAddress{0, "", uint16(localPort)}, nil); err != nil {
-		log.Fatal("Bind failed: ", err)
+		log.Fatal("Bind failed", err)
 	}
 	if err := ep.Listen(1024); err != nil {
-		log.Fatal("Listen failed: ", err)
+		log.Fatal("Listen failed", err)
 	}
 
 	// Wait for connections to appear.
@@ -42,8 +42,7 @@ func NewTCPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 				<-notifyCh
 				continue
 			}
-
-			log.Println("Accept failed:", err)
+			log.Println("Accept failed", err)
 		}
 
 		local, _ := endpoint.GetLocalAddress()

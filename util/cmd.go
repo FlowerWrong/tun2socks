@@ -1,9 +1,9 @@
 package util
 
 import (
-	"strings"
-	"os/exec"
 	"log"
+	"os/exec"
+	"strings"
 )
 
 func ExecCommand(name, sargs string) error {

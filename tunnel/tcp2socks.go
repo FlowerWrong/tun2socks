@@ -3,15 +3,15 @@ package tunnel
 import (
 	"context"
 	"errors"
-	"net"
-	"github.com/FlowerWrong/netstack/waiter"
-	"github.com/FlowerWrong/netstack/tcpip"
-	"log"
-	"time"
-	"sync"
 	"fmt"
-	"github.com/FlowerWrong/tun2socks/dns"
+	"github.com/FlowerWrong/netstack/tcpip"
+	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/tun2socks/configure"
+	"github.com/FlowerWrong/tun2socks/dns"
+	"log"
+	"net"
+	"sync"
+	"time"
 )
 
 // Tcp tunnel
@@ -110,18 +110,17 @@ readFromLocal:
 			if err == tcpip.ErrWouldBlock {
 				select {
 				case <-tcpTunnel.ctx.Done():
-					log.Printf("readFromLocal done because of '%s'", tcpTunnel.ctx.Err())
 					break readFromLocal
 				case <-notifyCh:
 					continue readFromLocal
 				case <-time.After(DefaultReadWriteDuration):
-					log.Println(err)
-					tcpTunnel.Close(errors.New("Read from tun timeout"))
+					log.Println("Read from local timeout", err)
+					tcpTunnel.Close(errors.New("read from tun timeout"))
 					break readFromLocal
 				}
 			}
-			log.Println(err)
-			tcpTunnel.Close(errors.New("ReadFromLocalWriteToRemote failed" + err.String()))
+			log.Println("Read from local failed", err)
+			tcpTunnel.Close(errors.New("Read from local failed" + err.String()))
 			break readFromLocal
 		}
 		if tcpTunnel.status != StatusClosed {
@@ -138,7 +137,6 @@ writeToRemote:
 	for {
 		select {
 		case <-tcpTunnel.ctx.Done():
-			log.Printf("writeToRemote done because of '%s'", tcpTunnel.ctx.Err())
 			break writeToRemote
 		case chunk := <-tcpTunnel.localPackets:
 			// tcpTunnel.socks5Conn.SetWriteDeadline(DefaultReadWriteTimeout)
@@ -158,14 +156,13 @@ readFromRemote:
 	for {
 		select {
 		case <-tcpTunnel.ctx.Done():
-			log.Printf("readFromRemote done because of '%s'", tcpTunnel.ctx.Err())
 			break readFromRemote
 		default:
 			buf := make([]byte, 1500)
 			// tcpTunnel.socks5Conn.SetReadDeadline(DefaultReadWriteTimeout)
 			n, err := tcpTunnel.socks5Conn.Read(buf)
 			if err != nil {
-				log.Println(err)
+				log.Println("Read from remote failed", err)
 				tcpTunnel.Close(err)
 				break readFromRemote
 			}
@@ -185,12 +182,11 @@ writeToLocal:
 	for {
 		select {
 		case <-tcpTunnel.ctx.Done():
-			log.Printf("WriteToRemote done because of '%s'", tcpTunnel.ctx.Err())
 			break writeToLocal
 		case chunk := <-tcpTunnel.remotePackets:
 			_, err := tcpTunnel.ep.Write(chunk, nil)
 			if err != nil {
-				log.Println(err)
+				log.Println("Write to local failed", err)
 				tcpTunnel.Close(errors.New(err.String()))
 				break writeToLocal
 			}
@@ -202,12 +198,8 @@ writeToLocal:
 func (tcpTunnel *TcpTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
 		tcpTunnel.SetStatus(StatusClosed)
-		log.Println("Close TCP tunnel because", reason.Error())
 		tcpTunnel.ctxCancel()
-		err := tcpTunnel.socks5Conn.Close()
-		if err != nil {
-			log.Println("Close socks5Conn falied", err)
-		}
+		tcpTunnel.socks5Conn.Close()
 		tcpTunnel.ep.Close()
 		close(tcpTunnel.localPackets)
 		close(tcpTunnel.remotePackets)

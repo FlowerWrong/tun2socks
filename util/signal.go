@@ -1,10 +1,10 @@
 package util
 
 import (
-	"os/signal"
-	"syscall"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 // Exit tun2socks
@@ -21,7 +21,7 @@ func NewSignalHandler() {
 		for s := range c {
 			switch s {
 			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-				fmt.Println("退出", s)
+				fmt.Println("Exit", s)
 				Exit()
 			case syscall.SIGUSR1:
 				fmt.Println("usr1", s)
