@@ -18,7 +18,7 @@ const (
 
 type GeneralConfig struct {
 	Network string // tun network
-	Mtu uint32
+	Mtu     uint32
 }
 
 type DnsConfig struct {

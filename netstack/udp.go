@@ -41,7 +41,9 @@ func NewUDPEndpointAndListenIt(s *stack.Stack, proto tcpip.NetworkProtocolNumber
 				<-notifyCh
 				continue
 			}
-			log.Println("Read from netstack failed", err)
+			if !util.IsClosed(err) {
+				log.Println("Read from netstack failed", err)
+			}
 			udp.UDPNatList.DelUDPNat(localAddr.Port)
 			continue
 		}

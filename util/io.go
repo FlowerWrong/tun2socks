@@ -1,6 +1,7 @@
 package util
 
 import (
+	"github.com/FlowerWrong/netstack/tcpip"
 	"io"
 	"net"
 )
@@ -18,6 +19,13 @@ func IsEOF(err error) bool {
 		if err.Error() == "use of closed network connection" {
 			return true
 		}
+	}
+	return false
+}
+
+func IsClosed(err *tcpip.Error) bool {
+	if err == tcpip.ErrClosedForSend || err == tcpip.ErrClosedForReceive {
+		return true
 	}
 	return false
 }

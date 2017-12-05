@@ -115,7 +115,9 @@ readFromLocal:
 					continue readFromLocal
 				}
 			}
-			log.Println("Read from local failed", err)
+			if !util.IsClosed(err) {
+				log.Println("Read from local failed", err)
+			}
 			tcpTunnel.Close(errors.New("read from local failed" + err.String()))
 			break readFromLocal
 		}
@@ -182,7 +184,9 @@ writeToLocal:
 		case chunk := <-tcpTunnel.remotePackets:
 			_, err := tcpTunnel.ep.Write(chunk, nil)
 			if err != nil {
-				log.Println("Write to local failed", err)
+				if !util.IsClosed(err) {
+					log.Println("Write to local failed", err)
+				}
 				tcpTunnel.Close(errors.New(err.String()))
 				break writeToLocal
 			}
