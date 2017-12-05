@@ -16,11 +16,13 @@ import (
 	"strings"
 )
 
-func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpip.NetworkProtocolNumber) {
+func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpip.NetworkProtocolNumber, uint16) {
+	var ip, _, _ = net.ParseCIDR(cfg.General.Network)
+
 	// Parse the IP address. Support both ipv4 and ipv6.
-	parsedAddr := net.ParseIP(cfg.General.NetstackAddr)
+	parsedAddr := net.ParseIP(ip.To4().String())
 	if parsedAddr == nil {
-		log.Fatalf("Bad IP address: %v", cfg.General.NetstackAddr)
+		log.Fatalf("Bad IP address: %v", cfg.General.Network)
 	}
 
 	var addr tcpip.Address
@@ -32,7 +34,7 @@ func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpi
 		addr = tcpip.Address(parsedAddr.To16())
 		proto = ipv6.ProtocolNumber
 	} else {
-		log.Fatalf("Unknown IP type: %v", cfg.General.NetstackAddr)
+		log.Fatalf("Unknown IP type: %v", cfg.General.Network)
 	}
 
 	// Create the stack with ip and tcp protocols, then add a tun-based NIC and address.
@@ -48,8 +50,13 @@ func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpi
 
 	util.Ifconfig(ifce.Name(), cfg.General.Network, cfg.General.Mtu)
 
+	port := NewRandomPort(s)
+	if port == 0 {
+		log.Fatal("New random port failed")
+	}
+
 	linkID := fdbased.New(ifce, fd, cfg.General.Mtu, nil)
-	if err := s.CreateNIC(1, linkID, true, addr, cfg.General.NetstackPort); err != nil {
+	if err := s.CreateNIC(1, linkID, true, addr, port); err != nil {
 		log.Fatal("Create NIC failed", err)
 	}
 
@@ -66,5 +73,5 @@ func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpi
 			NIC:         1,
 		},
 	})
-	return s, ifce, proto
+	return s, ifce, proto, port
 }

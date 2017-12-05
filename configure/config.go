@@ -17,10 +17,8 @@ const (
 )
 
 type GeneralConfig struct {
-	Network      string // tun network
-	NetstackAddr string `gcfg:"netstack-addr"`
-	NetstackPort uint16 `gcfg:"netstack-port"`
-	Mtu          uint32
+	Network string // tun network
+	Mtu uint32
 }
 
 type DnsConfig struct {
@@ -78,8 +76,6 @@ func Parse(filename string) (*AppConfig, error) {
 
 	// set default value
 	cfg.General.Network = "10.192.0.1/16"
-	cfg.General.NetstackAddr = "10.192.0.2"
-	cfg.General.NetstackPort = 7777
 	cfg.General.Mtu = 1500
 
 	cfg.Dns.DnsMode = "fake"
