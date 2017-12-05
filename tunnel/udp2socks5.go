@@ -19,9 +19,9 @@ import (
 
 // Udp tunnel
 type UdpTunnel struct {
-	endpoint             stack.TransportEndpointID
+	localEndpoint        stack.TransportEndpointID
 	socks5TcpConn        *gosocks.SocksConn
-	udpSocks5Listen      *net.UDPConn
+	socks5UdpListen      *net.UDPConn
 	RemotePackets        chan []byte // write to local
 	LocalPackets         chan []byte // write to remote, socks5
 	ctx                  context.Context
@@ -106,9 +106,9 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 	socks5TcpConn.SetDeadline(WithoutTimeout)
 
 	return &UdpTunnel{
-		endpoint:             endpoint,
+		localEndpoint:        endpoint,
 		socks5TcpConn:        socks5TcpConn,
-		udpSocks5Listen:      udpSocks5Listen,
+		socks5UdpListen:      udpSocks5Listen,
 		RemotePackets:        make(chan []byte, PktChannelSize),
 		LocalPackets:         make(chan []byte, PktChannelSize),
 		localAddr:            localAddr,
@@ -150,8 +150,8 @@ writeToRemote:
 		case <-udpTunnel.ctx.Done():
 			break writeToRemote
 		case chunk := <-udpTunnel.LocalPackets:
-			remoteHost := udpTunnel.endpoint.LocalAddress.To4().String()
-			remotePort := udpTunnel.endpoint.LocalPort
+			remoteHost := udpTunnel.localEndpoint.LocalAddress.To4().String()
+			remotePort := udpTunnel.localEndpoint.LocalPort
 
 			var hostType byte = gosocks.SocksIPv4Host
 			if udpTunnel.fakeDns != nil {
@@ -170,10 +170,12 @@ writeToRemote:
 				DstPort:  remotePort,
 				Data:     chunk,
 			}
-			// udpTunnel.udpSocks5Listen.SetWriteDeadline(DefaultReadWriteTimeout)
-			_, err := udpTunnel.udpSocks5Listen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
-			if err != nil && !util.IsEOF(err) {
-				log.Println("WriteTo UDP tunnel failed", err)
+			// udpTunnel.socks5UdpListen.SetWriteDeadline(DefaultReadWriteTimeout)
+			_, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
+			if err != nil {
+				if !util.IsEOF(err) {
+					log.Println("WriteTo UDP tunnel failed", err)
+				}
 				udpTunnel.Close(err)
 				break writeToRemote
 			}
@@ -190,8 +192,8 @@ readFromRemote:
 			break readFromRemote
 		default:
 			var udpSocks5Buf [4096]byte
-			// udpTunnel.udpSocks5Listen.SetReadDeadline(WithoutTimeout)
-			n, _, err := udpTunnel.udpSocks5Listen.ReadFromUDP(udpSocks5Buf[:])
+			// udpTunnel.socks5UdpListen.SetReadDeadline(WithoutTimeout)
+			n, _, err := udpTunnel.socks5UdpListen.ReadFromUDP(udpSocks5Buf[:])
 			if n > 0 {
 				udpBuf := make([]byte, n)
 				copy(udpBuf, udpSocks5Buf[:n])
@@ -205,8 +207,10 @@ readFromRemote:
 					udpTunnel.RemotePackets <- udpReq.Data
 				}
 			}
-			if err != nil && !util.IsEOF(err) {
-				log.Println("ReadFromUDP tunnel failed", err)
+			if err != nil {
+				if !util.IsEOF(err) {
+					log.Println("ReadFromUDP tunnel failed", err)
+				}
 				udpTunnel.Close(err)
 				break readFromRemote
 			}
@@ -222,8 +226,8 @@ writeToLocal:
 		case <-udpTunnel.ctx.Done():
 			break writeToLocal
 		case chunk := <-udpTunnel.RemotePackets:
-			remoteHost := udpTunnel.endpoint.LocalAddress.To4().String()
-			remotePort := udpTunnel.endpoint.LocalPort
+			remoteHost := udpTunnel.localEndpoint.LocalAddress.To4().String()
+			remotePort := udpTunnel.localEndpoint.LocalPort
 			pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, chunk)
 			if pkt == nil {
 				udpTunnel.Close(errors.New("pack ip packet return nil"))
@@ -254,10 +258,10 @@ writeToLocal:
 // Close this udp tunnel
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		udpTunnel.SetStatus(StatusClosed)
 		udpTunnel.ctxCancel()
+		udpTunnel.SetStatus(StatusClosed)
 		udpTunnel.socks5TcpConn.Close()
-		udpTunnel.udpSocks5Listen.Close()
+		udpTunnel.socks5UdpListen.Close()
 		udp.UDPNatList.DelUDPNat(udpTunnel.localAddr.Port)
 		close(udpTunnel.LocalPackets)
 		close(udpTunnel.RemotePackets)

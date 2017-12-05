@@ -16,16 +16,20 @@ import (
 
 // Tcp tunnel
 type TcpTunnel struct {
-	wq            *waiter.Queue
-	ep            tcpip.Endpoint
-	socks5Conn    net.Conn
-	remotePackets chan []byte // write to local
-	localPackets  chan []byte // write to remote, socks5
-	ctx           context.Context
-	ctxCancel     context.CancelFunc
-	closeOne      sync.Once    // to avoid multi close tunnel
-	status        TunnelStatus // to avoid panic: send on closed channel
-	rwMutex       sync.RWMutex
+	wq                   *waiter.Queue
+	localEndpoint        tcpip.Endpoint
+	localEndpointStatus  TunnelStatus // to avoid panic: send on closed channel
+	localEndpointRwMutex sync.RWMutex
+	remoteConn           net.Conn
+	remoteStatus         TunnelStatus // to avoid panic: send on closed channel
+	remoteRwMutex        sync.RWMutex
+	remotePacketBuf      chan []byte // write to local
+	remotePacketSize     int
+	localPacketBuf       chan []byte // write to remote, socks5
+	localPacketSize      int
+	ctx                  context.Context
+	ctxCancel            context.CancelFunc
+	closeOne             sync.Once // to avoid multi close tunnel
 }
 
 // Create a tcp tunnel
@@ -37,12 +41,15 @@ func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, f
 	}
 
 	return &TcpTunnel{
-		wq:            wq,
-		ep:            ep,
-		socks5Conn:    *socks5Conn,
-		remotePackets: make(chan []byte, PktChannelSize),
-		localPackets:  make(chan []byte, PktChannelSize),
-		rwMutex:       sync.RWMutex{},
+		wq:                   wq,
+		localEndpoint:        ep,
+		remoteConn:           *socks5Conn,
+		remotePacketBuf:      make(chan []byte, PktChannelSize),
+		remotePacketSize:     0,
+		localPacketBuf:       make(chan []byte, PktChannelSize),
+		localPacketSize:      0,
+		localEndpointRwMutex: sync.RWMutex{},
+		remoteRwMutex:        sync.RWMutex{},
 	}, nil
 }
 
@@ -73,17 +80,32 @@ func NewSocks5Conneciton(ip net.IP, port uint16, fakeDns *dns.Dns, proxies *conf
 }
 
 // Set tcp tunnel status with rwMutex
-func (tcpTunnel *TcpTunnel) SetStatus(s TunnelStatus) {
-	tcpTunnel.rwMutex.Lock()
-	tcpTunnel.status = s
-	tcpTunnel.rwMutex.Unlock()
+func (tcpTunnel *TcpTunnel) SetRemoteStatus(s TunnelStatus) {
+	tcpTunnel.remoteRwMutex.Lock()
+	tcpTunnel.remoteStatus = s
+	tcpTunnel.remoteRwMutex.Unlock()
 }
 
 // Get tcp tunnel status with rwMutex
-func (tcpTunnel *TcpTunnel) Status() TunnelStatus {
-	tcpTunnel.rwMutex.Lock()
-	s := tcpTunnel.status
-	tcpTunnel.rwMutex.Unlock()
+func (tcpTunnel *TcpTunnel) RemoteStatus() TunnelStatus {
+	tcpTunnel.remoteRwMutex.Lock()
+	s := tcpTunnel.remoteStatus
+	tcpTunnel.remoteRwMutex.Unlock()
+	return s
+}
+
+// Set tcp tunnel status with rwMutex
+func (tcpTunnel *TcpTunnel) SetLocalEndpointStatus(s TunnelStatus) {
+	tcpTunnel.localEndpointRwMutex.Lock()
+	tcpTunnel.localEndpointStatus = s
+	tcpTunnel.localEndpointRwMutex.Unlock()
+}
+
+// Get tcp tunnel status with rwMutex
+func (tcpTunnel *TcpTunnel) LocalEndpointStatus() TunnelStatus {
+	tcpTunnel.localEndpointRwMutex.Lock()
+	s := tcpTunnel.localEndpointStatus
+	tcpTunnel.localEndpointRwMutex.Unlock()
 	return s
 }
 
@@ -94,7 +116,8 @@ func (tcpTunnel *TcpTunnel) Run() {
 	go tcpTunnel.readFromRemote()
 	go tcpTunnel.writeToRemote()
 	go tcpTunnel.readFromLocal()
-	tcpTunnel.SetStatus(StatusProxying)
+	tcpTunnel.SetRemoteStatus(StatusProxying)
+	tcpTunnel.SetLocalEndpointStatus(StatusProxying)
 }
 
 // Read tcp packet form local netstack
@@ -105,7 +128,7 @@ func (tcpTunnel *TcpTunnel) readFromLocal() {
 
 readFromLocal:
 	for {
-		v, err := tcpTunnel.ep.Read(nil)
+		v, err := tcpTunnel.localEndpoint.Read(nil)
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {
 				select {
@@ -121,8 +144,8 @@ readFromLocal:
 			tcpTunnel.Close(errors.New("read from local failed" + err.String()))
 			break readFromLocal
 		}
-		if tcpTunnel.status != StatusClosed {
-			tcpTunnel.localPackets <- v
+		if tcpTunnel.localEndpointStatus != StatusClosed {
+			tcpTunnel.localPacketBuf <- v
 		} else {
 			break readFromLocal
 		}
@@ -136,13 +159,23 @@ writeToRemote:
 		select {
 		case <-tcpTunnel.ctx.Done():
 			break writeToRemote
-		case chunk := <-tcpTunnel.localPackets:
-			// tcpTunnel.socks5Conn.SetWriteDeadline(DefaultReadWriteTimeout)
-			_, err := tcpTunnel.socks5Conn.Write(chunk)
-			if err != nil && !util.IsEOF(err) {
-				log.Println("Write packet to remote failed", err)
-				tcpTunnel.Close(err)
-				break writeToRemote
+		case chunk := <-tcpTunnel.localPacketBuf:
+		WriteAllPacket:
+			for {
+				// tcpTunnel.remoteConn.SetWriteDeadline(DefaultReadWriteTimeout)
+				n, err := tcpTunnel.remoteConn.Write(chunk)
+				if err != nil {
+					if !util.IsEOF(err) {
+						log.Println("Write packet to remote failed", err)
+					}
+					tcpTunnel.Close(err)
+					break writeToRemote
+				} else if n < len(chunk) {
+					chunk = chunk[n:]
+					continue WriteAllPacket
+				} else {
+					break WriteAllPacket
+				}
 			}
 		}
 	}
@@ -156,17 +189,19 @@ readFromRemote:
 		case <-tcpTunnel.ctx.Done():
 			break readFromRemote
 		default:
-			buf := make([]byte, 1500)
-			// tcpTunnel.socks5Conn.SetReadDeadline(DefaultReadWriteTimeout)
-			n, err := tcpTunnel.socks5Conn.Read(buf)
-			if err != nil && !util.IsEOF(err) {
-				log.Println("Read from remote failed", err)
+			buf := make([]byte, BuffSize)
+			// tcpTunnel.remoteConn.SetReadDeadline(DefaultReadWriteTimeout)
+			n, err := tcpTunnel.remoteConn.Read(buf)
+			if err != nil {
+				if !util.IsEOF(err) {
+					log.Println("Read from remote failed", err)
+				}
 				tcpTunnel.Close(err)
 				break readFromRemote
 			}
 
-			if n > 0 && tcpTunnel.status != StatusClosed {
-				tcpTunnel.remotePackets <- buf[0:n]
+			if n > 0 && tcpTunnel.remoteStatus != StatusClosed {
+				tcpTunnel.remotePacketBuf <- buf[0:n]
 			} else {
 				break readFromRemote
 			}
@@ -181,14 +216,25 @@ writeToLocal:
 		select {
 		case <-tcpTunnel.ctx.Done():
 			break writeToLocal
-		case chunk := <-tcpTunnel.remotePackets:
-			_, err := tcpTunnel.ep.Write(chunk, nil)
-			if err != nil {
-				if !util.IsClosed(err) {
-					log.Println("Write to local failed", err)
+		case chunk := <-tcpTunnel.remotePacketBuf:
+		WriteAllPacket:
+			for {
+				var m uintptr
+				var err *tcpip.Error
+				m, err = tcpTunnel.localEndpoint.Write(chunk, nil)
+				n := int(m)
+				if err != nil {
+					if !util.IsClosed(err) {
+						log.Println("Write to local failed", err)
+					}
+					tcpTunnel.Close(errors.New(err.String()))
+					break writeToLocal
+				} else if n < len(chunk) {
+					chunk = chunk[n:]
+					continue WriteAllPacket
+				} else {
+					break WriteAllPacket
 				}
-				tcpTunnel.Close(errors.New(err.String()))
-				break writeToLocal
 			}
 		}
 	}
@@ -197,11 +243,16 @@ writeToLocal:
 // Close this tcp tunnel
 func (tcpTunnel *TcpTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
-		tcpTunnel.SetStatus(StatusClosed)
 		tcpTunnel.ctxCancel()
-		tcpTunnel.socks5Conn.Close()
-		tcpTunnel.ep.Close()
-		close(tcpTunnel.localPackets)
-		close(tcpTunnel.remotePackets)
+
+		// TODO
+		tcpTunnel.SetLocalEndpointStatus(StatusClosed)
+		tcpTunnel.SetRemoteStatus(StatusClosed)
+
+		tcpTunnel.localEndpoint.Close()
+		tcpTunnel.remoteConn.Close()
+
+		close(tcpTunnel.localPacketBuf)
+		close(tcpTunnel.remotePacketBuf)
 	})
 }
