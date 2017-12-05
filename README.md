@@ -9,9 +9,6 @@ sudo go run main.go --config=config.ini
 
 ## Known bugs
 
-* [ ] download software may be not complete, eg `brew upgrade atom`,
-  maybe downloaded 43%, but actually 100%.
-
 ## TODO
 
 * [ ] log
