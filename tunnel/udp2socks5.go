@@ -75,7 +75,6 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		return nil, err
 	}
 
-	// socks5TcpConn.SetWriteDeadline(DefaultReadWriteTimeout)
 	_, err = gosocks.WriteSocksRequest(socks5TcpConn, &gosocks.SocksRequest{
 		Cmd:      gosocks.SocksCmdUDPAssociate,
 		HostType: gosocks.SocksIPv4Host,
@@ -89,7 +88,7 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		udpSocks5Listen.Close()
 		return nil, err
 	}
-	// socks5TcpConn.SetReadDeadline(DefaultReadWriteTimeout)
+
 	cmdUDPAssociateReply, err := gosocks.ReadSocksReply(socks5TcpConn)
 	if err != nil {
 		log.Println("ReadSocksReply failed", err)
@@ -103,6 +102,7 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		udpSocks5Listen.Close()
 		return nil, err
 	}
+	// A zero value for t means I/O operations will not time out.
 	socks5TcpConn.SetDeadline(WithoutTimeout)
 
 	return &UdpTunnel{
@@ -170,7 +170,6 @@ writeToRemote:
 				DstPort:  remotePort,
 				Data:     chunk,
 			}
-			// udpTunnel.socks5UdpListen.SetWriteDeadline(DefaultReadWriteTimeout)
 			_, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
 			if err != nil {
 				if !util.IsEOF(err) {
@@ -192,7 +191,6 @@ readFromRemote:
 			break readFromRemote
 		default:
 			var udpSocks5Buf [PktChannelSize]byte
-			// udpTunnel.socks5UdpListen.SetReadDeadline(WithoutTimeout)
 			n, _, err := udpTunnel.socks5UdpListen.ReadFromUDP(udpSocks5Buf[0:])
 			if n > 0 {
 				udpReq, err := gosocks.ParseUDPRequest(udpSocks5Buf[0:n])

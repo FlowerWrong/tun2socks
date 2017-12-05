@@ -163,7 +163,6 @@ writeToRemote:
 		case chunk := <-tcpTunnel.localPacketBuf:
 		WriteAllPacket:
 			for {
-				// tcpTunnel.remoteConn.SetWriteDeadline(DefaultReadWriteTimeout)
 				n, err := tcpTunnel.remoteConn.Write(chunk)
 				if err != nil {
 					if !util.IsEOF(err) {
@@ -191,7 +190,6 @@ readFromRemote:
 			break readFromRemote
 		default:
 			buf := make([]byte, BuffSize)
-			// tcpTunnel.remoteConn.SetReadDeadline(DefaultReadWriteTimeout)
 			n, err := tcpTunnel.remoteConn.Read(buf)
 			if err != nil {
 				if !util.IsEOF(err) {
