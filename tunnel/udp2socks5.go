@@ -245,11 +245,11 @@ writeToLocal:
 				}
 			}
 			if err != nil {
-				log.Println(err)
+				log.Println("Write udp package to tun failed", err)
 				udpTunnel.Close(err)
-				break writeToLocal
+			} else {
+				udpTunnel.Close(errors.New("OK"))
 			}
-			udpTunnel.Close(errors.New("OK"))
 			break writeToLocal
 		}
 	}

@@ -224,6 +224,12 @@ writeToLocal:
 				m, err = tcpTunnel.localEndpoint.Write(chunk, nil)
 				n := int(m)
 				if err != nil {
+					if err == tcpip.ErrWouldBlock {
+						if n < len(chunk) {
+							chunk = chunk[n:]
+							continue WriteAllPacket
+						}
+					}
 					if !util.IsClosed(err) {
 						log.Println("Write to local failed", err)
 					}
