@@ -77,6 +77,7 @@ func NewSocks5Conneciton(ip net.IP, port uint16, fakeDns *dns.Dns, proxies *conf
 		return nil, err
 	}
 	socks5Conn.(*net.TCPConn).SetKeepAlive(true)
+	socks5Conn.SetDeadline(WithoutTimeout)
 	return &socks5Conn, nil
 }
 
@@ -190,6 +191,8 @@ readFromRemote:
 			break readFromRemote
 		default:
 			buf := make([]byte, BuffSize)
+			// 30s timeout
+			tcpTunnel.remoteConn.SetReadDeadline(DefaultReadWriteTimeout)
 			n, err := tcpTunnel.remoteConn.Read(buf)
 			if err != nil {
 				if !util.IsEOF(err) {
@@ -250,7 +253,6 @@ func (tcpTunnel *TcpTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
 		tcpTunnel.ctxCancel()
 
-		// TODO
 		tcpTunnel.SetLocalEndpointStatus(StatusClosed)
 		tcpTunnel.SetRemoteStatus(StatusClosed)
 

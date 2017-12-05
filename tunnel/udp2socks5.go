@@ -74,6 +74,7 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		socks5TcpConn.Close()
 		return nil, err
 	}
+	udpSocks5Listen.SetDeadline(WithoutTimeout)
 
 	_, err = gosocks.WriteSocksRequest(socks5TcpConn, &gosocks.SocksRequest{
 		Cmd:      gosocks.SocksCmdUDPAssociate,
@@ -191,6 +192,8 @@ readFromRemote:
 			break readFromRemote
 		default:
 			var udpSocks5Buf [PktChannelSize]byte
+			// 30s timeout
+			udpTunnel.socks5UdpListen.SetReadDeadline(DefaultReadWriteTimeout)
 			n, _, err := udpTunnel.socks5UdpListen.ReadFromUDP(udpSocks5Buf[0:])
 			if n > 0 {
 				udpReq, err := gosocks.ParseUDPRequest(udpSocks5Buf[0:n])

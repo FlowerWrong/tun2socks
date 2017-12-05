@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net"
+	"time"
 )
 
 func main() {
@@ -30,9 +31,11 @@ func main() {
 
 func handleClient(conn *net.UDPConn) {
 	var buf [2048]byte
+	// conn.SetDeadline(time.Time{}) no time out
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	n, remote, err := conn.ReadFromUDP(buf[0:])
 	if err != nil {
-		log.Println("Error Reading")
+		log.Println("Error Reading", err)
 	} else {
 		log.Println(string(buf[0:n]), "from", remote)
 	}

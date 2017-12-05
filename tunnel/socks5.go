@@ -3,7 +3,7 @@ package tunnel
 import "time"
 
 var DefaultConnectDuration = 1 * time.Second
-var DefaultReadWriteTimeout = time.Now().Add(time.Second * 60)
+var DefaultReadWriteTimeout = time.Now().Add(time.Second * 30)
 var DefaultReadWriteDuration = 10 * time.Second
 var WithoutTimeout = time.Time{}
 
