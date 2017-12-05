@@ -20,4 +20,4 @@ const (
 )
 
 const BuffSize = 1500
-var PktChannelSize = BuffSize * 64
+const PktChannelSize = BuffSize * 64

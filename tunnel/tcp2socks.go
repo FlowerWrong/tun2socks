@@ -76,6 +76,7 @@ func NewSocks5Conneciton(ip net.IP, port uint16, fakeDns *dns.Dns, proxies *conf
 		log.Printf("[tcp] dial %s by proxy %q failed: %s", remoteAddr, proxy, err)
 		return nil, err
 	}
+	socks5Conn.(*net.TCPConn).SetKeepAlive(true)
 	return &socks5Conn, nil
 }
 

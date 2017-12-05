@@ -191,7 +191,7 @@ readFromRemote:
 		case <-udpTunnel.ctx.Done():
 			break readFromRemote
 		default:
-			var udpSocks5Buf [BuffSize]byte
+			var udpSocks5Buf [PktChannelSize]byte
 			// udpTunnel.socks5UdpListen.SetReadDeadline(WithoutTimeout)
 			n, _, err := udpTunnel.socks5UdpListen.ReadFromUDP(udpSocks5Buf[0:])
 			if n > 0 {
