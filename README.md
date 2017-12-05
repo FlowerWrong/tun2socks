@@ -15,9 +15,8 @@ sudo go run main.go --config=config.ini
 ## TODO
 
 * [ ] log
-* [ ] tunnel remained buf
-* [ ] less buf copy
 * [ ] windows support
+* [ ] hot reload config
 
 ## Thanks
 
