@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"log"
@@ -99,9 +98,33 @@ function flushCache {
 }
 `
 	} else if runtime.GOOS == "linux" || runtime.GOOS == "freebsd" {
+		shell = `
+function updateDNS {
+  case "$1" in
+    g|google)
+      echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+      ;;
+    a|ali)
+      echo "nameserver 223.5.5.5" | sudo tee /etc/resolv.conf
+      ;;
+    l|local)
+      echo "nameserver 127.0.0.1" | sudo tee /etc/resolv.conf
+      ;;
+    *)
+      echo "You have failed to specify what to do correctly."
+      exit 1
+      ;;
+  esac
+}
 
+function flushCache {
+  nscd -K
+  nscd
+}
+`
 	} else {
-		fmt.Println("Without support for", runtime.GOOS)
+		log.Println("Without support for", runtime.GOOS)
+		return
 	}
 	if setFlag {
 		shell += `
