@@ -9,7 +9,7 @@ import (
 
 // Exit tun2socks
 func Exit() {
-	// TODO cleanup
+	UpdateDNSServers(false)
 	os.Exit(0)
 }
 

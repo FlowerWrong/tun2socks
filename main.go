@@ -69,6 +69,7 @@ func main() {
 	if cfg.Dns.DnsMode == "fake" {
 		waitGroup.Add(1)
 		go func(waitGroup sync.WaitGroup, fakeDns *dns.Dns) {
+			util.UpdateDNSServers(true)
 			fakeDns.Serve()
 			waitGroup.Done()
 		}(waitGroup, fakeDns)
