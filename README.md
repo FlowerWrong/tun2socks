@@ -29,7 +29,6 @@ NOTE: `go run` not support kill command signal, please build app with `go build 
 
 ## TODO
 
-* [ ] log
 * [ ] windows support
 * [ ] android support
 * [ ] release

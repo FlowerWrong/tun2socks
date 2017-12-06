@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"github.com/FlowerWrong/netstack/tcpip"
-	"github.com/FlowerWrong/tun2socks/configure"
-	"github.com/FlowerWrong/tun2socks/dns"
 	"github.com/FlowerWrong/tun2socks/netstack"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
@@ -29,31 +27,10 @@ func main() {
 	}
 
 	app := new(tun2socks.App)
-
-	// parse config
-	app.Cfg = new(configure.AppConfig)
-	err := app.Cfg.Parse(configFile)
-	if err != nil {
-		log.Fatal("Get default proxy failed", err)
-	}
+	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
 
 	var proto tcpip.NetworkProtocolNumber
-	app.S, app.Ifce, proto, app.HookPort = netstack.NewNetstack(app.Cfg)
-
-	if app.Cfg.Dns.DnsMode == "fake" {
-		app.FakeDns, err = dns.NewFakeDnsServer(app.Cfg)
-		if err != nil {
-			log.Fatal("New fake dns server failed", err)
-		}
-	}
-
-	app.Proxies, err = configure.NewProxies(app.Cfg.Proxy)
-	if err != nil {
-		log.Fatalln("New proxies failed", err)
-	}
-
-	app.AddRoutes()
-	app.SignalHandler()
+	proto = netstack.NewNetstack(app)
 
 	app.WG.Add(1)
 	go netstack.NewTCPEndpointAndListenIt(proto, app)

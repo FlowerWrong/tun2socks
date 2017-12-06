@@ -8,21 +8,19 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
-	"github.com/FlowerWrong/tun2socks/configure"
-	"github.com/FlowerWrong/tun2socks/util"
-	"github.com/FlowerWrong/water"
+	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"log"
 	"net"
 	"strings"
 )
 
-func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpip.NetworkProtocolNumber, uint16) {
-	var ip, _, _ = net.ParseCIDR(cfg.General.Network)
+func NewNetstack(app *tun2socks.App) tcpip.NetworkProtocolNumber {
+	var ip, _, _ = net.ParseCIDR(app.Cfg.General.Network)
 
 	// Parse the IP address. Support both ipv4 and ipv6.
 	parsedAddr := net.ParseIP(ip.To4().String())
 	if parsedAddr == nil {
-		log.Fatalf("Bad IP address: %v", cfg.General.Network)
+		log.Fatalf("Bad IP address: %v", app.Cfg.General.Network)
 	}
 
 	var addr tcpip.Address
@@ -34,38 +32,28 @@ func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpi
 		addr = tcpip.Address(parsedAddr.To16())
 		proto = ipv6.ProtocolNumber
 	} else {
-		log.Fatalf("Unknown IP type: %v", cfg.General.Network)
+		log.Fatalf("Unknown IP type: %v", app.Cfg.General.Network)
 	}
 
 	// Create the stack with ip and tcp protocols, then add a tun-based NIC and address.
-	s := stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
+	app.S = stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
 
-	ifce, fd, err := water.New(water.Config{
-		DeviceType: water.TUN,
-	})
-	if err != nil {
-		log.Fatal("Create tun interface failed", err)
-	}
-	log.Println("Interface Name:", ifce.Name())
-
-	util.Ifconfig(ifce.Name(), cfg.General.Network, cfg.General.Mtu)
-
-	port := NewRandomPort(s)
-	if port == 0 {
+	app.HookPort = NewRandomPort(app.S)
+	if app.HookPort == 0 {
 		log.Fatal("New random port failed")
 	}
 
-	linkID := fdbased.New(ifce, fd, cfg.General.Mtu, nil)
-	if err := s.CreateNIC(1, linkID, true, addr, port); err != nil {
+	linkID := fdbased.New(app.Ifce, app.Fd, app.Cfg.General.Mtu, nil)
+	if err := app.S.CreateNIC(1, linkID, true, addr, app.HookPort); err != nil {
 		log.Fatal("Create NIC failed", err)
 	}
 
-	if err := s.AddAddress(1, proto, addr); err != nil {
+	if err := app.S.AddAddress(1, proto, addr); err != nil {
 		log.Fatal("Add address to stack failed", err)
 	}
 
 	// Add default route.
-	s.SetRouteTable([]tcpip.Route{
+	app.S.SetRouteTable([]tcpip.Route{
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", len(addr))),
 			Mask:        tcpip.Address(strings.Repeat("\x00", len(addr))),
@@ -73,5 +61,5 @@ func NewNetstack(cfg *configure.AppConfig) (*stack.Stack, *water.Interface, tcpi
 			NIC:         1,
 		},
 	})
-	return s, ifce, proto, port
+	return proto
 }
