@@ -5,7 +5,7 @@
 ```
 cp config.example.ini config.ini
 # edit it for free
-sudo go run main.go --config=config.ini
+sudo go run cmd/main.go --config=config.ini
 
 go build -o tun2socks
 ```
