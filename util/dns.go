@@ -64,24 +64,22 @@ function updateDNS {
       exit 1
   fi
 
-  case "$1" in
+  olddns=$(networksetup -getdnsservers "$currentservice")
+
+	case "$1" in
     d|default)
-      olddns=$(networksetup -getdnsservers "$currentservice")
       echo "old dns is $olddns, set dns to default"
       networksetup -setdnsservers "$currentservice" empty
       ;;
     g|google)
-      olddns=$(networksetup -getdnsservers "$currentservice")
       echo "old dns is $olddns, set dns to google dns"
       networksetup -setdnsservers "$currentservice" 8.8.8.8 4.4.4.4
       ;;
     a|ali)
-      olddns=$(networksetup -getdnsservers "$currentservice")
       echo "old dns is $olddns, set dns to alidns"
       networksetup -setdnsservers "$currentservice" "223.5.5.5"
       ;;
     l|local)
-      olddns=$(networksetup -getdnsservers "$currentservice")
       echo "old dns is $olddns, set dns to 127.0.0.1"
       networksetup -setdnsservers "$currentservice" "127.0.0.1"
       ;;

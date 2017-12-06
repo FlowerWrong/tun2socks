@@ -112,7 +112,7 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	// if domain use proxy
 	if matched && proxy != "" {
 		if record := d.DnsTablePtr.Set(domain, proxy); record != nil {
-			go d.fillRealIP(record, r)
+			// go d.fillRealIP(record, r)
 			return record.Answer(r), nil
 		}
 	}
@@ -145,7 +145,7 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 		// if ip use proxy
 		if proxy != "" {
 			if record := d.DnsTablePtr.Set(domain, proxy); record != nil {
-				record.SetRealIP(msg)
+				// record.SetRealIP(msg)
 				return record.Answer(r), nil
 			}
 		}
