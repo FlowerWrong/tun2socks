@@ -10,20 +10,20 @@ sudo go run cmd/main.go --config=config.ini
 go build -o tun2socks
 ```
 
-## Supported OS (tested)
+## Support operating system.
 
-* [x] OSX 10.13.1
+* [x] macOS 10.13.1
 * [x] arch linux
 
-## Hot reload config
+## Hot reload config with `USR2` signal.
 
-Supported `route`, `udp.proxy`, `proxy`, `pattern`, `rule`.
+Support `route`, `udp.proxy`, `proxy`, `pattern` and `rule`, see [config.example.ini](https://github.com/FlowerWrong/tun2socks/blob/master/config.example.ini).
 
 ```bash
 sudo kill -s USR2 $PID
 ```
 
-NOTE: go run not support kill command signal.
+NOTE: `go run` not support kill command signal, please build app with `go build -o tun2socks`.
 
 ## Known bugs
 
