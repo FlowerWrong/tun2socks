@@ -11,9 +11,8 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
-	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/FlowerWrong/tun2socks/dns"
-	"github.com/FlowerWrong/water"
+	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/yinghuocho/gosocks"
 )
 
@@ -27,17 +26,15 @@ type UdpTunnel struct {
 	ctx                  context.Context
 	ctxCancel            context.CancelFunc
 	localAddr            tcpip.FullAddress
-	ifce                 *water.Interface
 	cmdUDPAssociateReply *gosocks.SocksReply
 	closeOne             sync.Once
 	status               TunnelStatus // to avoid panic: send on closed channel
 	rwMutex              sync.RWMutex
-	fakeDns              *dns.Dns
-	cfg                  *configure.AppConfig
+	app                  *tun2socks.App
 }
 
 // Create a udp tunnel
-func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, ifce *water.Interface, dnsProxy string, fakeDns *dns.Dns, cfg *configure.AppConfig) (*UdpTunnel, error) {
+func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, app *tun2socks.App) (*UdpTunnel, error) {
 	localTcpSocks5Dialer := &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
 		Timeout: DefaultConnectDuration,
@@ -45,16 +42,16 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 
 	remoteHost := endpoint.LocalAddress.To4().String()
 	proxy := ""
-	if fakeDns != nil {
+	if app.FakeDns != nil {
 		ip := net.ParseIP(remoteHost)
-		record := fakeDns.DnsTablePtr.GetByIP(ip)
+		record := app.FakeDns.DnsTablePtr.GetByIP(ip)
 		if record != nil {
-			proxy = cfg.GetProxy(record.Proxy)
+			proxy = app.Cfg.GetProxy(record.Proxy)
 		}
 	}
 
 	if proxy == "" {
-		proxy = dnsProxy
+		proxy, _ = app.Cfg.UdpProxy()
 	}
 
 	socks5TcpConn, err := localTcpSocks5Dialer.Dial(proxy)
@@ -113,10 +110,8 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		RemotePackets:        make(chan []byte, PktChannelSize),
 		LocalPackets:         make(chan []byte, PktChannelSize),
 		localAddr:            localAddr,
-		ifce:                 ifce,
+		app:                  app,
 		cmdUDPAssociateReply: cmdUDPAssociateReply,
-		fakeDns:              fakeDns,
-		cfg:                  cfg,
 	}, nil
 }
 
@@ -155,9 +150,9 @@ writeToRemote:
 			remotePort := udpTunnel.localEndpoint.LocalPort
 
 			var hostType byte = gosocks.SocksIPv4Host
-			if udpTunnel.fakeDns != nil {
+			if udpTunnel.app.FakeDns != nil {
 				ip := net.ParseIP(remoteHost)
-				record := udpTunnel.fakeDns.DnsTablePtr.GetByIP(ip)
+				record := udpTunnel.app.FakeDns.DnsTablePtr.GetByIP(ip)
 				if record != nil {
 					remoteHost = record.Hostname
 					hostType = gosocks.SocksDomainHost
@@ -230,12 +225,12 @@ writeToLocal:
 				udpTunnel.Close(errors.New("pack ip packet return nil"))
 				break writeToLocal
 			}
-			_, err := udpTunnel.ifce.Write(pkt)
+			_, err := udpTunnel.app.Ifce.Write(pkt)
 			if err != nil {
 				log.Println("Write to tun failed", err)
 			} else {
 				// cache dns packet
-				if udpTunnel.cfg.Dns.DnsMode == "udp_relay_via_socks5" {
+				if udpTunnel.app.Cfg.Dns.DnsMode == "udp_relay_via_socks5" {
 					if dns.DNSCache != nil {
 						dns.DNSCache.Store(chunk)
 					}

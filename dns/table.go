@@ -185,6 +185,23 @@ func (c *DnsTable) Serve() error {
 	return nil
 }
 
+func (c *DnsTable) Reload(ip net.IP, subnet *net.IPNet) {
+	log.Println("Dns table hot reloaded")
+	c.npdLock.Lock()
+	defer c.npdLock.Unlock()
+	for domain, _ := range c.nonProxyDomains {
+		delete(c.nonProxyDomains, domain)
+	}
+
+	c.recordsLock.Lock()
+	defer c.recordsLock.Unlock()
+	for domain, record := range c.records {
+		delete(c.records, domain)
+		delete(c.ip2Domain, record.IP.String())
+		c.ipPool.Release(record.IP)
+	}
+}
+
 func NewDnsTable(ip net.IP, subnet *net.IPNet) *DnsTable {
 	c := new(DnsTable)
 	c.ipPool = NewDnsIPPool(ip, subnet)

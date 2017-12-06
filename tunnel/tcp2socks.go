@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/waiter"
-	"github.com/FlowerWrong/tun2socks/configure"
-	"github.com/FlowerWrong/tun2socks/dns"
+	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
 	"log"
 	"net"
@@ -33,8 +32,8 @@ type TcpTunnel struct {
 }
 
 // Create a tcp tunnel
-func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, fakeDns *dns.Dns, proxies *configure.Proxies) (*TcpTunnel, error) {
-	socks5Conn, err := NewSocks5Conneciton(ip, port, fakeDns, proxies)
+func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, app *tun2socks.App) (*TcpTunnel, error) {
+	socks5Conn, err := NewSocks5Conneciton(ip, port, app)
 	if err != nil {
 		log.Println("New socks5 conn failed", err)
 		return nil, err
@@ -54,12 +53,12 @@ func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, f
 }
 
 // New socks5 connection
-func NewSocks5Conneciton(ip net.IP, port uint16, fakeDns *dns.Dns, proxies *configure.Proxies) (*net.Conn, error) {
+func NewSocks5Conneciton(ip net.IP, port uint16, app *tun2socks.App) (*net.Conn, error) {
 	var remoteAddr string
 	proxy := ""
 
-	if fakeDns != nil {
-		record := fakeDns.DnsTablePtr.GetByIP(ip)
+	if app.FakeDns != nil {
+		record := app.FakeDns.DnsTablePtr.GetByIP(ip)
 		if record != nil {
 			remoteAddr = fmt.Sprintf("%v:%d", record.Hostname, port)
 			proxy = record.Proxy
@@ -70,7 +69,7 @@ func NewSocks5Conneciton(ip net.IP, port uint16, fakeDns *dns.Dns, proxies *conf
 		remoteAddr = fmt.Sprintf("%v:%d", ip, port)
 	}
 
-	socks5Conn, err := proxies.Dial(proxy, remoteAddr)
+	socks5Conn, err := app.Proxies.Dial(proxy, remoteAddr)
 	if err != nil {
 		socks5Conn.Close()
 		log.Printf("[tcp] dial %s by proxy %q failed: %s", remoteAddr, proxy, err)

@@ -6,12 +6,24 @@
 cp config.example.ini config.ini
 # edit it for free
 sudo go run main.go --config=config.ini
+
+go build -o tun2socks
 ```
 
 ## Supported OS (tested)
 
 * [x] OSX 10.13.1
 * [x] arch linux
+
+## Hot reload config
+
+Supported `route`, `udp.proxy`, `proxy`, `pattern`, `rule`.
+
+```bash
+sudo kill -s USR2 $PID
+```
+
+NOTE: go run not support kill command signal.
 
 ## Known bugs
 
@@ -20,7 +32,6 @@ sudo go run main.go --config=config.ini
 * [ ] log
 * [ ] windows support
 * [ ] android support
-* [ ] hot reload config
 * [ ] release
 
 ## Thanks

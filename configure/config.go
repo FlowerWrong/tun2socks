@@ -64,6 +64,7 @@ type AppConfig struct {
 	Proxy   map[string]*ProxyConfig
 	Pattern map[string]*PatternConfig
 	Rule    RuleConfig
+	File    string
 }
 
 func (cfg *AppConfig) check() error {
@@ -71,9 +72,7 @@ func (cfg *AppConfig) check() error {
 	return nil
 }
 
-func Parse(filename string) (*AppConfig, error) {
-	cfg := new(AppConfig)
-
+func (cfg *AppConfig) Parse(filename string) error {
 	// set default value
 	cfg.General.Network = "10.192.0.1/16"
 	cfg.General.Mtu = 1500
@@ -90,7 +89,7 @@ func Parse(filename string) (*AppConfig, error) {
 	// decode config value
 	err := gcfg.ReadFileInto(cfg, filename)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// set backend dns default value
@@ -101,10 +100,11 @@ func Parse(filename string) (*AppConfig, error) {
 
 	err = cfg.check()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return cfg, nil
+	cfg.File = filename
+	return nil
 }
 
 // Get proxy addr from name

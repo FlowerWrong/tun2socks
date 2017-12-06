@@ -3,6 +3,7 @@ package dns
 
 import (
 	"github.com/FlowerWrong/tun2socks/configure"
+	"log"
 )
 
 type Rule struct {
@@ -26,8 +27,14 @@ func (rule *Rule) Proxy(val interface{}) (bool, string) {
 	return false, rule.final
 }
 
-func NewRule(config configure.RuleConfig, patterns map[string]*configure.PatternConfig) *Rule {
-	rule := new(Rule)
+// reload rule
+func (rule *Rule) Reload(config configure.RuleConfig, patterns map[string]*configure.PatternConfig) {
+	log.Println("Rule hot reloaded")
+	rule.patterns = rule.patterns[:0]
+	rule.setUp(config, patterns)
+}
+
+func (rule *Rule) setUp(config configure.RuleConfig, patterns map[string]*configure.PatternConfig) {
 	rule.final = config.Final
 	pattern := NewDomainSuffixPattern("__internal__", "", nil)
 	rule.patterns = append(rule.patterns, pattern)
@@ -38,5 +45,10 @@ func NewRule(config configure.RuleConfig, patterns map[string]*configure.Pattern
 			}
 		}
 	}
+}
+
+func NewRule(config configure.RuleConfig, patterns map[string]*configure.PatternConfig) *Rule {
+	rule := new(Rule)
+	rule.setUp(config, patterns)
 	return rule
 }

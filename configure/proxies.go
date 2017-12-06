@@ -35,14 +35,17 @@ func (p *Proxies) DefaultDial(addr string) (net.Conn, error) {
 	return dialer.Dial("tcp", addr)
 }
 
-func NewProxies(config map[string]*ProxyConfig) (*Proxies, error) {
-	p := &Proxies{}
+func (p *Proxies) Reload(config map[string]*ProxyConfig) error {
+	log.Println("Proxies hot reloaded")
+	return p.setUp(config)
+}
 
+func (p *Proxies) setUp(config map[string]*ProxyConfig) error {
 	proxies := make(map[string]*proxy.Proxy)
 	for name, item := range config {
 		proxy, err := proxy.FromUrl(item.Url)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if item.Default || p.Default == "" {
@@ -52,5 +55,14 @@ func NewProxies(config map[string]*ProxyConfig) (*Proxies, error) {
 	}
 	p.proxies = proxies
 	log.Printf("[proxies] default proxy: %q", p.Default)
+	return nil
+}
+
+func NewProxies(config map[string]*ProxyConfig) (*Proxies, error) {
+	p := &Proxies{}
+	err := p.setUp(config)
+	if err != nil {
+		return nil, err
+	}
 	return p, nil
 }
