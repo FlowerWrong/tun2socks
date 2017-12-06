@@ -4,8 +4,14 @@
 
 ```
 cp config.example.ini config.ini
+# edit it for free
 sudo go run main.go --config=config.ini
 ```
+
+## Supported OS (tested)
+
+* [x] OSX 10.13.1
+* [x] arch linux
 
 ## Known bugs
 
@@ -13,7 +19,9 @@ sudo go run main.go --config=config.ini
 
 * [ ] log
 * [ ] windows support
+* [ ] android support
 * [ ] hot reload config
+* [ ] release
 
 ## Thanks
 
