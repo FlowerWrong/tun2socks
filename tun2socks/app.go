@@ -12,7 +12,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"runtime"
 )
 
 type App struct {
@@ -27,27 +26,7 @@ type App struct {
 }
 
 func (app *App) NewTun() *App {
-	var err error
-	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
-		app.Ifce, app.Fd, err = water.New(water.Config{
-			DeviceType: water.TUN,
-		})
-	} else if runtime.GOOS == "windows" {
-		app.Ifce, app.Fd, err = water.New(water.Config{
-			DeviceType: water.TUN,
-			PlatformSpecificParams: water.PlatformSpecificParams{
-				ComponentID: "tap0901",
-				Network:     "192.168.1.10/24",
-			},
-		})
-	} else {
-		log.Fatal("No support for", runtime.GOOS)
-	}
-	if err != nil {
-		log.Fatal("Create tun interface failed", err)
-	}
-	log.Println("Interface Name:", app.Ifce.Name())
-	util.Ifconfig(app.Ifce.Name(), app.Cfg.General.Network, app.Cfg.General.Mtu)
+	NewTun(app)
 	return app
 }
 
