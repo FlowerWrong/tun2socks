@@ -45,7 +45,11 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 	if app.FakeDns != nil {
 		ip := net.ParseIP(remoteHost)
 		record := app.FakeDns.DnsTablePtr.GetByIP(ip)
+
 		if record != nil {
+			if record.Proxy == "block" {
+				return nil, errors.New(record.Hostname + " is blocked")
+			}
 			proxy = app.Cfg.GetProxy(record.Proxy)
 		}
 	}

@@ -60,6 +60,10 @@ func NewSocks5Conneciton(ip net.IP, port uint16, app *tun2socks.App) (*net.Conn,
 	if app.FakeDns != nil {
 		record := app.FakeDns.DnsTablePtr.GetByIP(ip)
 		if record != nil {
+			if record.Proxy == "block" {
+				return nil, errors.New(record.Hostname + " is blocked")
+			}
+
 			remoteAddr = fmt.Sprintf("%v:%d", record.Hostname, port)
 			proxy = record.Proxy
 		} else {
