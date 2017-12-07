@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 )
@@ -68,39 +69,55 @@ func (app *App) Config(configFile string) *App {
 func (app *App) SignalHandler() *App {
 	// signal handler
 	c := make(chan os.Signal)
-	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGUSR1, syscall.SIGUSR2)
-	go func(app *App) {
-		for s := range c {
-			switch s {
-			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-				log.Println("Exit", s)
-				util.Exit()
-			case syscall.SIGUSR1:
-				log.Println("Usr1", s)
-			case syscall.SIGUSR2:
-				log.Println("Usr2", s)
-				// parse config
-				file := app.Cfg.File
-				app.Cfg = new(configure.AppConfig)
-				err := app.Cfg.Parse(file)
-				if err != nil {
-					log.Fatal("Get default proxy failed", err)
-				}
-				if app.Cfg.Dns.DnsMode == "fake" {
-					app.FakeDns.RulePtr.Reload(app.Cfg.Rule, app.Cfg.Pattern)
 
-					var ip, subnet, _ = net.ParseCIDR(app.Cfg.General.Network)
-					app.FakeDns.DnsTablePtr.Reload(ip, subnet)
+	if runtime.GOOS == "windows" {
+		signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+		go func(app *App) {
+			for s := range c {
+				switch s {
+				case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
+					log.Println("Exit", s)
+					util.Exit()
+				default:
+					log.Println("Other", s)
 				}
-				app.Proxies.Reload(app.Cfg.Proxy)
-				log.Println("Routes hot reloaded")
-				app.AddRoutes()
-				break
-			default:
-				log.Println("Other", s)
 			}
-		}
-	}(app)
+		}(app)
+	} else {
+		signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGUSR1, syscall.SIGUSR2)
+		go func(app *App) {
+			for s := range c {
+				switch s {
+				case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
+					log.Println("Exit", s)
+					util.Exit()
+				case syscall.SIGUSR1:
+					log.Println("Usr1", s)
+				case syscall.SIGUSR2:
+					log.Println("Usr2", s)
+					// parse config
+					file := app.Cfg.File
+					app.Cfg = new(configure.AppConfig)
+					err := app.Cfg.Parse(file)
+					if err != nil {
+						log.Fatal("Get default proxy failed", err)
+					}
+					if app.Cfg.Dns.DnsMode == "fake" {
+						app.FakeDns.RulePtr.Reload(app.Cfg.Rule, app.Cfg.Pattern)
+
+						var ip, subnet, _ = net.ParseCIDR(app.Cfg.General.Network)
+						app.FakeDns.DnsTablePtr.Reload(ip, subnet)
+					}
+					app.Proxies.Reload(app.Cfg.Proxy)
+					log.Println("Routes hot reloaded")
+					app.AddRoutes()
+					break
+				default:
+					log.Println("Other", s)
+				}
+			}
+		}(app)
+	}
 
 	return app
 }
