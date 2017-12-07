@@ -8,7 +8,7 @@ import (
 	"net"
 )
 
-func Ifconfig(tunName, network string, mtu uint32) {
+func Ifconfig(tunName, network string, _ uint32) {
 	var ip, ipv4Net, _ = net.ParseCIDR(network)
 	ipStr := ip.To4().String()
 	sargs := fmt.Sprintf("%s %s netmask %s", tunName, ipStr, util.Ipv4MaskString(ipv4Net.Mask))

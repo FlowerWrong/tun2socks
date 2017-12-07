@@ -1,11 +1,20 @@
 package tun2socks
 
 import (
+	"fmt"
+	"github.com/FlowerWrong/tun2socks/util"
 	"github.com/FlowerWrong/water"
 	"log"
+	"net"
 )
 
-func Ifconfig(_, _ string, _ uint32) {
+func Ifconfig(tunName, network string, _ uint32) {
+	var ip, ipv4Net, _ = net.ParseCIDR(network)
+	ipStr := ip.To4().String()
+	sargs := fmt.Sprintf("ip set address name='%s' source=static addr=%s mask=%s gateway=none", tunName, ipStr, util.Ipv4MaskString(ipv4Net.Mask))
+	if err := util.ExecCommand("netsh interface", sargs); err != nil {
+		log.Fatal("execCommand failed", err)
+	}
 }
 
 func NewTun(app *App) {
