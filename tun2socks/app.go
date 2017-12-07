@@ -8,11 +8,7 @@ import (
 	"github.com/FlowerWrong/water"
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"runtime"
 	"sync"
-	"syscall"
 )
 
 type App struct {
@@ -61,62 +57,6 @@ func (app *App) Config(configFile string) *App {
 	app.Proxies, err = configure.NewProxies(app.Cfg.Proxy)
 	if err != nil {
 		log.Fatalln("New proxies failed", err)
-	}
-
-	return app
-}
-
-func (app *App) SignalHandler() *App {
-	// signal handler
-	c := make(chan os.Signal)
-
-	if runtime.GOOS == "windows" {
-		signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-		go func(app *App) {
-			for s := range c {
-				switch s {
-				case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-					log.Println("Exit", s)
-					util.Exit()
-				default:
-					log.Println("Other", s)
-				}
-			}
-		}(app)
-	} else {
-		signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGUSR1, syscall.SIGUSR2)
-		go func(app *App) {
-			for s := range c {
-				switch s {
-				case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-					log.Println("Exit", s)
-					util.Exit()
-				case syscall.SIGUSR1:
-					log.Println("Usr1", s)
-				case syscall.SIGUSR2:
-					log.Println("Usr2", s)
-					// parse config
-					file := app.Cfg.File
-					app.Cfg = new(configure.AppConfig)
-					err := app.Cfg.Parse(file)
-					if err != nil {
-						log.Fatal("Get default proxy failed", err)
-					}
-					if app.Cfg.Dns.DnsMode == "fake" {
-						app.FakeDns.RulePtr.Reload(app.Cfg.Rule, app.Cfg.Pattern)
-
-						var ip, subnet, _ = net.ParseCIDR(app.Cfg.General.Network)
-						app.FakeDns.DnsTablePtr.Reload(ip, subnet)
-					}
-					app.Proxies.Reload(app.Cfg.Proxy)
-					log.Println("Routes hot reloaded")
-					app.AddRoutes()
-					break
-				default:
-					log.Println("Other", s)
-				}
-			}
-		}(app)
 	}
 
 	return app
