@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -10,7 +11,7 @@ import (
 func ExecCommand(name, sargs string) error {
 	args := strings.Split(sargs, " ")
 	cmd := exec.Command(name, args...)
-	log.Println("exec command: %s %s", name, sargs)
+	log.Printf("exec command: %s %s", name, sargs)
 	return cmd.Run()
 }
 
@@ -24,4 +25,10 @@ func ExecShell(s string) {
 		log.Println("Run shell command failed", err)
 	}
 	log.Println(out.String())
+}
+
+// Exit tun2socks
+func Exit(tunName string) {
+	UpdateDNSServers(false, tunName)
+	os.Exit(0)
 }

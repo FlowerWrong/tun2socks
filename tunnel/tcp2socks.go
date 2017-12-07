@@ -71,7 +71,6 @@ func NewSocks5Conneciton(ip net.IP, port uint16, app *tun2socks.App) (*net.Conn,
 
 	socks5Conn, err := app.Proxies.Dial(proxy, remoteAddr)
 	if err != nil {
-		socks5Conn.Close()
 		log.Printf("[tcp] dial %s by proxy %q failed: %s", remoteAddr, proxy, err)
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"log"
@@ -35,7 +36,7 @@ func CreateDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint1
 	return packetData
 }
 
-func UpdateDNSServers(setFlag bool) {
+func UpdateDNSServers(setFlag bool, tunName string) {
 	var shell string
 	if runtime.GOOS == "darwin" {
 		shell = `
@@ -120,6 +121,17 @@ function flushCache {
   nscd
 }
 `
+	} else if runtime.GOOS == "windows" {
+		var sargs string
+		if setFlag {
+			sargs = fmt.Sprintf("interface ipv4 add dnsserver \"%s\" 127.0.0.1 index=1", tunName)
+		} else {
+			sargs = fmt.Sprintf("interface ipv4 add dnsserver \"%s\" 223.5.5.5 index=1", tunName)
+		}
+		if err := ExecCommand("netsh", sargs); err != nil {
+			log.Println("execCommand failed", err)
+		}
+		return
 	} else {
 		log.Println("Without support for", runtime.GOOS)
 		return

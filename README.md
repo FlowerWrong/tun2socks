@@ -14,6 +14,7 @@ go build -o tun2socks
 
 * [x] macOS 10.13.1
 * [x] arch linux
+* [x] windows 10 support with [tap-windows6](https://github.com/OpenVPN/tap-windows6)
 
 ## Hot reload config with `USR2` signal.
 
