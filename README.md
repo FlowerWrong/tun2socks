@@ -16,7 +16,7 @@ go build -o tun2socks
 * [x] arch linux
 * [x] windows 10 support with [tap-windows6](https://github.com/OpenVPN/tap-windows6)
 
-## Hot reload config with `USR2` signal.
+## Hot reload config with `USR2` signal. Not support windows.
 
 Support `route`, `udp.proxy`, `proxy`, `pattern` and `rule`, see [config.example.ini](https://github.com/FlowerWrong/tun2socks/blob/master/config.example.ini).
 
@@ -30,7 +30,7 @@ NOTE: `go run` not support kill command signal, please build app with `go build 
 
 ## TODO
 
-* [ ] windows support
+* [ ] set and reset dns server to `127.0.0.1` auto on windows
 * [ ] android support
 * [ ] release
 
