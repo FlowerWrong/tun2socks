@@ -36,7 +36,7 @@ func CreateDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint1
 	return packetData
 }
 
-func UpdateDNSServers(setFlag bool, tunName string) {
+func UpdateDNSServers(setFlag bool) {
 	var shell string
 	if runtime.GOOS == "darwin" {
 		shell = `
@@ -122,11 +122,12 @@ function flushCache {
 }
 `
 	} else if runtime.GOOS == "windows" {
+		// FIXME How to get current active network interface in windows?
 		var sargs string
 		if setFlag {
-			sargs = fmt.Sprintf("interface ipv4 add dnsserver \"%s\" 127.0.0.1 index=1", tunName)
+			sargs = fmt.Sprintf("interface ipv4 add dnsserver \"以太网\" 127.0.0.1 index=1")
 		} else {
-			sargs = fmt.Sprintf("interface ipv4 add dnsserver \"%s\" 223.5.5.5 index=1", tunName)
+			sargs = fmt.Sprintf("interface ipv4 add dnsserver \"以太网\" 223.5.5.5 index=1")
 		}
 		if err := ExecCommand("netsh", sargs); err != nil {
 			log.Println("execCommand failed", err)

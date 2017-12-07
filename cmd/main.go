@@ -45,7 +45,7 @@ func main() {
 	if app.Cfg.Dns.DnsMode == "fake" {
 		app.WG.Add(1)
 		go func(app *tun2socks.App) {
-			util.UpdateDNSServers(true, app.Ifce.Name())
+			util.UpdateDNSServers(true)
 			app.FakeDns.Serve()
 			app.WG.Done()
 		}(app)

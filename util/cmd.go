@@ -29,6 +29,6 @@ func ExecShell(s string) {
 
 // Exit tun2socks
 func Exit(tunName string) {
-	UpdateDNSServers(false, tunName)
+	UpdateDNSServers(false)
 	os.Exit(0)
 }
