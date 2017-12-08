@@ -74,7 +74,7 @@ func (cfg *AppConfig) check() error {
 
 func (cfg *AppConfig) Parse(filename string) error {
 	// set default value
-	cfg.General.Network = "10.192.0.1/16"
+	cfg.General.Network = "198.18.0.0/15"
 	cfg.General.Mtu = 1500
 
 	cfg.Dns.DnsMode = "fake"
