@@ -6,7 +6,7 @@ import (
 )
 
 // Add subnet route
-func AddRoute(tun string, subnet *net.IPNet) error {
+func AddNetRoute(tun string, subnet *net.IPNet) error {
 	sargs := fmt.Sprintf("add -net %s dev %s", subnet, tun)
 	return ExecCommand("route", sargs)
 }

@@ -32,7 +32,7 @@ func (app *App) AddRoutes() *App {
 	for _, val := range app.Cfg.Route.V {
 		_, subnet, _ := net.ParseCIDR(val)
 		if subnet != nil {
-			util.AddRoute(name, subnet)
+			util.AddNetRoute(name, subnet)
 		} else {
 			util.AddHostRoute(name, val)
 		}
