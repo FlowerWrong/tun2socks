@@ -14,22 +14,23 @@ import (
 	"strings"
 )
 
+const (
+	NICId = 1
+	Backlog = 1025
+)
+
+
 func NewNetstack(app *tun2socks.App) tcpip.NetworkProtocolNumber {
-	var ip, _, _ = net.ParseCIDR(app.Cfg.General.Network)
+	var tunIp, _, _ = net.ParseCIDR(app.Cfg.General.Network)
 
 	// Parse the IP address. Support both ipv4 and ipv6.
-	parsedAddr := net.ParseIP(ip.To4().String())
-	if parsedAddr == nil {
-		log.Fatalf("Bad IP address: %v", app.Cfg.General.Network)
-	}
-
 	var addr tcpip.Address
 	var proto tcpip.NetworkProtocolNumber
-	if parsedAddr.To4() != nil {
-		addr = tcpip.Address(parsedAddr.To4())
+	if tunIp.To4() != nil {
+		addr = tcpip.Address(tunIp.To4())
 		proto = ipv4.ProtocolNumber
-	} else if parsedAddr.To16() != nil {
-		addr = tcpip.Address(parsedAddr.To16())
+	} else if tunIp.To16() != nil {
+		addr = tcpip.Address(tunIp.To16())
 		proto = ipv6.ProtocolNumber
 	} else {
 		log.Fatalf("Unknown IP type: %v", app.Cfg.General.Network)
@@ -44,11 +45,11 @@ func NewNetstack(app *tun2socks.App) tcpip.NetworkProtocolNumber {
 	}
 
 	linkID := fdbased.New(app.Ifce, app.Fd, app.Cfg.General.Mtu, nil)
-	if err := app.S.CreateNIC(1, linkID, true, addr, app.HookPort); err != nil {
+	if err := app.S.CreateNIC(NICId, linkID, true, addr, app.HookPort); err != nil {
 		log.Fatal("Create NIC failed", err)
 	}
 
-	if err := app.S.AddAddress(1, proto, addr); err != nil {
+	if err := app.S.AddAddress(NICId, proto, addr); err != nil {
 		log.Fatal("Add address to stack failed", err)
 	}
 
@@ -58,7 +59,7 @@ func NewNetstack(app *tun2socks.App) tcpip.NetworkProtocolNumber {
 			Destination: tcpip.Address(strings.Repeat("\x00", len(addr))),
 			Mask:        tcpip.Address(strings.Repeat("\x00", len(addr))),
 			Gateway:     "",
-			NIC:         1,
+			NIC:         NICId,
 		},
 	})
 	return proto

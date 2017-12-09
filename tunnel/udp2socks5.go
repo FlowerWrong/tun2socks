@@ -40,6 +40,7 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		Timeout: DefaultConnectDuration,
 	}
 
+	// TODO ipv6
 	remoteHost := endpoint.LocalAddress.To4().String()
 	proxy := ""
 	if app.FakeDns != nil {
@@ -150,6 +151,7 @@ writeToRemote:
 		case <-udpTunnel.ctx.Done():
 			break writeToRemote
 		case chunk := <-udpTunnel.LocalPackets:
+			// TODO ipv6
 			remoteHost := udpTunnel.localEndpoint.LocalAddress.To4().String()
 			remotePort := udpTunnel.localEndpoint.LocalPort
 
@@ -222,6 +224,7 @@ writeToLocal:
 		case <-udpTunnel.ctx.Done():
 			break writeToLocal
 		case chunk := <-udpTunnel.RemotePackets:
+			// TODO ipv6
 			remoteHost := udpTunnel.localEndpoint.LocalAddress.To4().String()
 			remotePort := udpTunnel.localEndpoint.LocalPort
 			pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, chunk)

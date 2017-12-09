@@ -21,7 +21,7 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 	}
 	defer ep.Close()
 	defer app.WG.Done()
-	if err := ep.Bind(tcpip.FullAddress{0, "", app.HookPort}, nil); err != nil {
+	if err := ep.Bind(tcpip.FullAddress{NICId, "", app.HookPort}, nil); err != nil {
 		log.Fatal("Bind failed", err)
 	}
 
@@ -46,6 +46,7 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 		}
 
 		endpoint := udp.UDPNatList.GetUDPNat(localAddr.Port)
+		// TODO ipv6
 		remoteHost := endpoint.LocalAddress.To4().String()
 		contains, _ := IgnoreRanger.Contains(net.ParseIP(remoteHost))
 		if contains {
