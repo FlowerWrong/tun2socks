@@ -44,6 +44,13 @@ func NewTCPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 
 		local, _ := endpoint.GetLocalAddress()
 		ip := net.ParseIP(local.Addr.To4().String())
+
+		contains, _ := IgnoreRanger.Contains(ip)
+		if contains {
+			log.Println("Ignore ip cidr", ip)
+			endpoint.Close()
+			continue
+		}
 		tcpTunnel, e := tunnel.NewTCP2Socks(wq, endpoint, ip, local.Port, app)
 		if e != nil {
 			log.Println("NewTCP2Socks tunnel failed", e, tcpTunnel)

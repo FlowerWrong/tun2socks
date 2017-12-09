@@ -46,13 +46,18 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 		}
 
 		endpoint := udp.UDPNatList.GetUDPNat(localAddr.Port)
+		remoteHost := endpoint.LocalAddress.To4().String()
+		contains, _ := IgnoreRanger.Contains(net.ParseIP(remoteHost))
+		if contains {
+			log.Println("Ignore ip cidr", remoteHost)
+			continue
+		}
 
 		if app.Cfg.Dns.DnsMode == "udp_relay_via_socks5" {
 			answer := dns.DNSCache.Query(v)
 			if answer != nil {
 				data, err := answer.Pack()
 				if err == nil {
-					remoteHost := endpoint.LocalAddress.To4().String()
 					remotePort := endpoint.LocalPort
 					pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(localAddr.Addr.To4().String()), localAddr.Port, data)
 					if pkt == nil {
