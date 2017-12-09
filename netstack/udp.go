@@ -49,7 +49,6 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 		remoteHost := endpoint.LocalAddress.To4().String()
 		contains, _ := IgnoreRanger.Contains(net.ParseIP(remoteHost))
 		if contains {
-			log.Println("Ignore ip cidr", remoteHost)
 			continue
 		}
 

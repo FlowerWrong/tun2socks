@@ -33,6 +33,8 @@ func (app *App) AddRoutes() *App {
 		_, subnet, _ := net.ParseCIDR(val)
 		if subnet != nil {
 			util.AddRoute(name, subnet)
+		} else {
+			util.AddHostRoute(name, val)
 		}
 	}
 	return app

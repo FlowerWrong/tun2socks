@@ -6,6 +6,7 @@ import (
 	"net"
 )
 
+// Do not log EOF and `use of closed network connection` error.
 func IsEOF(err error) bool {
 	if err == nil {
 		return false
@@ -23,8 +24,9 @@ func IsEOF(err error) bool {
 	return false
 }
 
+// Do not log `endpoint is closed for send`, `endpoint is closed for receive` and `connection reset by peer` error.
 func IsClosed(err *tcpip.Error) bool {
-	if err == tcpip.ErrClosedForSend || err == tcpip.ErrClosedForReceive {
+	if err == tcpip.ErrClosedForSend || err == tcpip.ErrClosedForReceive || err == tcpip.ErrConnectionReset {
 		return true
 	}
 	return false

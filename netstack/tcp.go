@@ -47,7 +47,6 @@ func NewTCPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 
 		contains, _ := IgnoreRanger.Contains(ip)
 		if contains {
-			log.Println("Ignore ip cidr", ip)
 			endpoint.Close()
 			continue
 		}
