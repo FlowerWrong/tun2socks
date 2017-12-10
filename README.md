@@ -30,9 +30,12 @@ NOTE: `go run` not support kill command signal, please build app with `go build 
 
 ## TODO
 
-* [ ] ipv6
-* [ ] set and reset dns server to `127.0.0.1` auto on windows
+* [ ] ipv6 support
+* [ ] set and reset dns server to `127.0.0.1` automatically on windows with shell
+* [ ] Raspberry Pi support
 * [ ] android support
+* [ ] freebsd support
+* [ ] openbsd support
 * [ ] release
 
 ## Thanks
