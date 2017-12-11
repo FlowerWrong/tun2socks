@@ -1,6 +1,10 @@
 package netstack
 
 import (
+	"log"
+	"net"
+	"strings"
+
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/link/fdbased"
 	"github.com/FlowerWrong/netstack/tcpip/network/ipv4"
@@ -9,19 +13,18 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
-	"log"
-	"net"
-	"strings"
 )
 
 const (
+	// NICId is global nicid for stack
 	NICId = 1
-	Backlog = 1025
+	// Backlog is tcp listen backlog
+	Backlog = 1024
 )
 
-
+// NewNetstack create a tcp/ip stack
 func NewNetstack(app *tun2socks.App) tcpip.NetworkProtocolNumber {
-	var tunIp, _, _ = net.ParseCIDR(app.Cfg.General.Network)
+	tunIp, _, _ := net.ParseCIDR(app.Cfg.General.Network)
 
 	// Parse the IP address. Support both ipv4 and ipv6.
 	var addr tcpip.Address

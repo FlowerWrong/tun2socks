@@ -3,10 +3,11 @@ package tunnel
 import (
 	"context"
 	"errors"
-	"github.com/FlowerWrong/tun2socks/util"
 	"log"
 	"net"
 	"sync"
+
+	"github.com/FlowerWrong/tun2socks/util"
 
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/stack"

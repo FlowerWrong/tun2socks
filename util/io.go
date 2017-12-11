@@ -1,9 +1,10 @@
 package util
 
 import (
-	"github.com/FlowerWrong/netstack/tcpip"
 	"io"
 	"net"
+
+	"github.com/FlowerWrong/netstack/tcpip"
 )
 
 // Do not log EOF and `use of closed network connection` error.

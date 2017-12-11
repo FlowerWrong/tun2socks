@@ -2,9 +2,10 @@ package configure
 
 import (
 	"errors"
-	"gopkg.in/gcfg.v1"
 	"log"
 	"net/url"
+
+	"gopkg.in/gcfg.v1"
 )
 
 const (
@@ -16,11 +17,13 @@ const (
 	DnsIPPoolMaxSpace      = 0x3ffff // 4*65535
 )
 
+// GeneralConfig ini
 type GeneralConfig struct {
 	Network string // tun network
 	Mtu     uint32
 }
 
+// DnsConfig ini
 type DnsConfig struct {
 	DnsMode         string   `gcfg:"dns-mode"`
 	DnsPort         uint16   `gcfg:"dns-port"`
@@ -72,6 +75,7 @@ func (cfg *AppConfig) check() error {
 	return nil
 }
 
+// Parse the config.ini file to AppConfig
 func (cfg *AppConfig) Parse(filename string) error {
 	// set default value
 	cfg.General.Network = "198.18.0.0/15"
@@ -107,7 +111,7 @@ func (cfg *AppConfig) Parse(filename string) error {
 	return nil
 }
 
-// Get proxy addr from name
+// GetProxy addr from name
 func (cfg *AppConfig) GetProxy(name string) string {
 	proxyConfig := cfg.Proxy[name]
 	url, err := url.Parse(proxyConfig.Url)
@@ -118,7 +122,7 @@ func (cfg *AppConfig) GetProxy(name string) string {
 	return url.Host
 }
 
-// Get default proxy addr, eg: socks5://127.0.0.1:1080, return 127.0.0.1:1080
+// DefaultPorxy return default proxy addr, eg: socks5://127.0.0.1:1080, return 127.0.0.1:1080
 func (cfg *AppConfig) DefaultPorxy() (string, error) {
 	proxyConfig := cfg.DefaultPorxyConfig()
 	u, err := url.Parse(proxyConfig.Url)
@@ -129,6 +133,7 @@ func (cfg *AppConfig) DefaultPorxy() (string, error) {
 	return u.Host, nil
 }
 
+// DefaultPorxyConfig return the default ProxyConfig pointer
 func (cfg *AppConfig) DefaultPorxyConfig() *ProxyConfig {
 	for _, proxyConfig := range cfg.Proxy {
 		if proxyConfig.Default {
@@ -138,6 +143,7 @@ func (cfg *AppConfig) DefaultPorxyConfig() *ProxyConfig {
 	return nil
 }
 
+// UdpProxy return the configed udp proxy
 func (cfg *AppConfig) UdpProxy() (string, error) {
 	proxyConfig := cfg.Proxy[cfg.Udp.Proxy]
 	if proxyConfig == nil {

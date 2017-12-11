@@ -2,14 +2,15 @@ package main
 
 import (
 	"flag"
-	"github.com/FlowerWrong/netstack/tcpip"
-	"github.com/FlowerWrong/tun2socks/netstack"
-	"github.com/FlowerWrong/tun2socks/tun2socks"
-	"github.com/FlowerWrong/tun2socks/util"
 	"log"
 	"math/rand"
 	"runtime"
 	"time"
+
+	"github.com/FlowerWrong/netstack/tcpip"
+	"github.com/FlowerWrong/tun2socks/netstack"
+	"github.com/FlowerWrong/tun2socks/tun2socks"
+	"github.com/FlowerWrong/tun2socks/util"
 )
 
 func main() {

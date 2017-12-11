@@ -1,16 +1,17 @@
 package netstack
 
 import (
+	"log"
+	"net"
+
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
 	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/tunnel"
-	"log"
-	"net"
 )
 
-// Create TCP endpoint, bind it, then start listening.
+// NewTCPEndpointAndListenIt create a TCP endpoint, bind it, then start listening.
 func NewTCPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks.App) {
 	var wq waiter.Queue
 	ep, err := app.S.NewEndpoint(tcp.ProtocolNumber, proto, &wq)

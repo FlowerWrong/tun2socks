@@ -1,9 +1,10 @@
 package dns
 
 import (
-	"github.com/FlowerWrong/tun2socks/util"
 	"net"
 	"testing"
+
+	"github.com/FlowerWrong/tun2socks/util"
 )
 
 func checkCases(t *testing.T, proxy string, pattern Pattern, cases map[interface{}]bool) {

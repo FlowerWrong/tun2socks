@@ -1,6 +1,9 @@
 package netstack
 
 import (
+	"log"
+	"net"
+
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/netstack/waiter"
@@ -8,11 +11,9 @@ import (
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/tunnel"
 	"github.com/FlowerWrong/tun2socks/util"
-	"log"
-	"net"
 )
 
-// Create UDP endpoint, bind it, then start listening.
+// NewUDPEndpointAndListenIt create a UDP endpoint, bind it, then start read.
 func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks.App) {
 	var wq waiter.Queue
 	ep, e := app.S.NewEndpoint(udp.ProtocolNumber, proto, &wq)

@@ -4,15 +4,16 @@ package dns
 import (
 	"errors"
 	"fmt"
-	"github.com/FlowerWrong/tun2socks/configure"
-	"github.com/miekg/dns"
-	"github.com/miekg/dns/dnsutil"
-	"github.com/xjdrew/proxy"
 	"log"
 	"net"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/FlowerWrong/tun2socks/configure"
+	"github.com/miekg/dns"
+	"github.com/miekg/dns/dnsutil"
+	"github.com/xjdrew/proxy"
 )
 
 var resolveErr = errors.New("resolve error")

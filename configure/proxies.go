@@ -3,9 +3,10 @@ package configure
 import (
 	"errors"
 	"fmt"
-	"github.com/xjdrew/proxy"
 	"log"
 	"net"
+
+	"github.com/xjdrew/proxy"
 )
 
 var errNoProxy = errors.New("no proxy")

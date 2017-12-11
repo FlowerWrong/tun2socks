@@ -1,10 +1,11 @@
 package dns
 
 import (
-	"github.com/miekg/dns"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/miekg/dns"
 )
 
 type dnsCacheEntry struct {

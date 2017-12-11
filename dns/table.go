@@ -2,12 +2,13 @@
 package dns
 
 import (
-	"github.com/FlowerWrong/tun2socks/configure"
-	"github.com/miekg/dns"
 	"log"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/FlowerWrong/tun2socks/configure"
+	"github.com/miekg/dns"
 )
 
 // hijacked domain

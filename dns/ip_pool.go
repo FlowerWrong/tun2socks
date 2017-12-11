@@ -3,11 +3,12 @@
 package dns
 
 import (
-	"github.com/FlowerWrong/tun2socks/configure"
-	"github.com/FlowerWrong/tun2socks/util"
 	"hash/adler32"
 	"log"
 	"net"
+
+	"github.com/FlowerWrong/tun2socks/configure"
+	"github.com/FlowerWrong/tun2socks/util"
 )
 
 type DnsIPPool struct {

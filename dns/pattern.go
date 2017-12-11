@@ -2,12 +2,13 @@
 package dns
 
 import (
-	"github.com/FlowerWrong/tun2socks/configure"
-	"github.com/FlowerWrong/tun2socks/geoip"
-	"github.com/FlowerWrong/tun2socks/util"
 	"net"
 	"sort"
 	"strings"
+
+	"github.com/FlowerWrong/tun2socks/configure"
+	"github.com/FlowerWrong/tun2socks/geoip"
+	"github.com/FlowerWrong/tun2socks/util"
 )
 
 const (

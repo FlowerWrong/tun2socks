@@ -2,8 +2,9 @@
 package dns
 
 import (
-	"github.com/FlowerWrong/tun2socks/configure"
 	"log"
+
+	"github.com/FlowerWrong/tun2socks/configure"
 )
 
 type Rule struct {

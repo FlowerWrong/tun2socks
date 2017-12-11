@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"net"
+	"sync"
+
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
-	"log"
-	"net"
-	"sync"
 )
 
 // Tcp tunnel

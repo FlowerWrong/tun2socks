@@ -2,11 +2,12 @@ package util
 
 import (
 	"fmt"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"log"
 	"net"
 	"runtime"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 )
 
 // Create a DNS response with dns data, pack with udp, and ip header.

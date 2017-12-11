@@ -2,10 +2,11 @@ package tun2socks
 
 import (
 	"fmt"
-	"github.com/FlowerWrong/tun2socks/util"
-	"github.com/FlowerWrong/water"
 	"log"
 	"net"
+
+	"github.com/FlowerWrong/tun2socks/util"
+	"github.com/FlowerWrong/water"
 )
 
 func Ifconfig(tunName, network string, _ uint32) {

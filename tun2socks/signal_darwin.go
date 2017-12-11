@@ -1,13 +1,14 @@
 package tun2socks
 
 import (
-	"github.com/FlowerWrong/tun2socks/configure"
-	"github.com/FlowerWrong/tun2socks/util"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/FlowerWrong/tun2socks/configure"
+	"github.com/FlowerWrong/tun2socks/util"
 )
 
 func (app *App) SignalHandler() *App {

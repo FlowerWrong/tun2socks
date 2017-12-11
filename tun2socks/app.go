@@ -1,14 +1,15 @@
 package tun2socks
 
 import (
+	"log"
+	"net"
+	"sync"
+
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/FlowerWrong/tun2socks/dns"
 	"github.com/FlowerWrong/tun2socks/util"
 	"github.com/FlowerWrong/water"
-	"log"
-	"net"
-	"sync"
 )
 
 type App struct {
