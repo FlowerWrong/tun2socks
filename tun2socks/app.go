@@ -17,7 +17,6 @@ type App struct {
 	Proxies  *configure.Proxies
 	S        *stack.Stack
 	Ifce     *water.Interface
-	Fd       int
 	HookPort uint16
 	WG       sync.WaitGroup
 }

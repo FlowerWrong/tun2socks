@@ -44,7 +44,7 @@ func NewNetstack(app *tun2socks.App) tcpip.NetworkProtocolNumber {
 		log.Fatal("New random port failed")
 	}
 
-	linkID := fdbased.New(app.Ifce, app.Fd, app.Cfg.General.Mtu, nil)
+	linkID := fdbased.New(app.Ifce, app.Cfg.General.Mtu, nil)
 	if err := app.S.CreateNIC(NICId, linkID, true, addr, app.HookPort); err != nil {
 		log.Fatal("Create NIC failed", err)
 	}

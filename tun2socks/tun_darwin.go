@@ -19,7 +19,7 @@ func Ifconfig(tunName, network string, mtu uint32) {
 
 func NewTun(app *App) {
 	var err error
-	app.Ifce, app.Fd, err = water.New(water.Config{
+	app.Ifce, err = water.New(water.Config{
 		DeviceType: water.TUN,
 	})
 	if err != nil {
