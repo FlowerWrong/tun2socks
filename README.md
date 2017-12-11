@@ -15,6 +15,8 @@ go build -o tun2socks
 * [x] macOS 10.13.1
 * [x] arch linux
 * [x] windows 10 support with [tap-windows6](https://github.com/OpenVPN/tap-windows6)
+* [x] Raspberry Pi support
+* [x] android support with root
 
 ## Hot reload config with `USR2` signal. Not support windows.
 
@@ -32,8 +34,6 @@ NOTE: `go run` not support kill command signal, please build app with `go build 
 
 * [ ] ipv6 support
 * [ ] set and reset dns server to `127.0.0.1` automatically on windows with shell
-* [ ] Raspberry Pi support
-* [ ] android support
 * [ ] freebsd support
 * [ ] openbsd support
 * [ ] release

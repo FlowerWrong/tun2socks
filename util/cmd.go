@@ -16,7 +16,7 @@ func ExecCommand(name, sargs string) error {
 }
 
 func ExecShell(s string) {
-	cmd := exec.Command("/bin/bash", "-c", s)
+	cmd := exec.Command("sh", "-c", s)
 	var out bytes.Buffer
 
 	cmd.Stdout = &out
