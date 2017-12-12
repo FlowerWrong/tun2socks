@@ -12,7 +12,6 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
-	"github.com/FlowerWrong/tun2socks/dns"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/yinghuocho/gosocks"
 )
@@ -234,16 +233,6 @@ writeToLocal:
 				break writeToLocal
 			}
 			_, err := udpTunnel.app.Ifce.Write(pkt)
-			if err != nil {
-				log.Println("Write to tun failed", err)
-			} else {
-				// cache dns packet
-				if udpTunnel.app.Cfg.Dns.DnsMode == "udp_relay_via_socks5" {
-					if dns.DNSCache != nil {
-						dns.DNSCache.Store(chunk)
-					}
-				}
-			}
 			if err != nil {
 				log.Println("Write udp package to tun failed", err)
 				udpTunnel.Close(err)

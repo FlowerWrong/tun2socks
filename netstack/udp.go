@@ -7,7 +7,6 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/netstack/waiter"
-	"github.com/FlowerWrong/tun2socks/dns"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/tunnel"
 	"github.com/FlowerWrong/tun2socks/util"
@@ -58,27 +57,6 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 		contains, _ := IgnoreRanger.Contains(net.ParseIP(remoteHost))
 		if contains {
 			continue
-		}
-
-		if app.Cfg.Dns.DnsMode == "udp_relay_via_socks5" {
-			answer := dns.DNSCache.Query(v)
-			if answer != nil {
-				data, err := answer.Pack()
-				if err == nil {
-					remotePort := endpoint.LocalPort
-					pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(localAddr.Addr.To4().String()), localAddr.Port, data)
-					if pkt == nil {
-						continue
-					}
-					_, err := app.Ifce.Write(pkt)
-					if err != nil {
-						log.Println("Write to tun failed", err)
-					} else {
-						udp.UDPNatList.Delete(localAddr.Port)
-						continue
-					}
-				}
-			}
 		}
 
 		udpTunnel, e := tunnel.NewUdpTunnel(endpoint, localAddr, app)
