@@ -30,6 +30,7 @@ type TcpTunnel struct {
 	ctx                  context.Context
 	ctxCancel            context.CancelFunc
 	closeOne             sync.Once // to avoid multi close tunnel
+	wg                   sync.WaitGroup
 }
 
 // Create a tcp tunnel
@@ -117,9 +118,13 @@ func (tcpTunnel *TcpTunnel) LocalEndpointStatus() TunnelStatus {
 // Start tcp tunnel
 func (tcpTunnel *TcpTunnel) Run() {
 	tcpTunnel.ctx, tcpTunnel.ctxCancel = context.WithCancel(context.Background())
+	tcpTunnel.wg.Add(1)
 	go tcpTunnel.writeToLocal()
+	tcpTunnel.wg.Add(1)
 	go tcpTunnel.readFromRemote()
+	tcpTunnel.wg.Add(1)
 	go tcpTunnel.writeToRemote()
+	tcpTunnel.wg.Add(1)
 	go tcpTunnel.readFromLocal()
 	tcpTunnel.SetRemoteStatus(StatusProxying)
 	tcpTunnel.SetLocalEndpointStatus(StatusProxying)
@@ -130,6 +135,7 @@ func (tcpTunnel *TcpTunnel) readFromLocal() {
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	tcpTunnel.wq.EventRegister(&waitEntry, waiter.EventIn)
 	defer tcpTunnel.wq.EventUnregister(&waitEntry)
+	defer tcpTunnel.wg.Done()
 
 readFromLocal:
 	for {
@@ -159,6 +165,7 @@ readFromLocal:
 
 // Write tcp packet to upstream
 func (tcpTunnel *TcpTunnel) writeToRemote() {
+	defer tcpTunnel.wg.Done()
 writeToRemote:
 	for {
 		select {
@@ -187,6 +194,7 @@ writeToRemote:
 
 // Read tcp packet from upstream
 func (tcpTunnel *TcpTunnel) readFromRemote() {
+	defer tcpTunnel.wg.Done()
 readFromRemote:
 	for {
 		select {
@@ -214,6 +222,7 @@ readFromRemote:
 
 // Write tcp packet to local netstack
 func (tcpTunnel *TcpTunnel) writeToLocal() {
+	defer tcpTunnel.wg.Done()
 writeToLocal:
 	for {
 		select {
@@ -256,6 +265,8 @@ func (tcpTunnel *TcpTunnel) Close(reason error) {
 
 		tcpTunnel.SetLocalEndpointStatus(StatusClosed)
 		tcpTunnel.SetRemoteStatus(StatusClosed)
+
+		tcpTunnel.wg.Wait()
 
 		tcpTunnel.localEndpoint.Close()
 		tcpTunnel.remoteConn.Close()

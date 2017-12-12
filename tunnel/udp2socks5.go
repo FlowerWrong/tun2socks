@@ -31,6 +31,7 @@ type UdpTunnel struct {
 	status               TunnelStatus // to avoid panic: send on closed channel
 	rwMutex              sync.RWMutex
 	app                  *tun2socks.App
+	wg                   sync.WaitGroup
 }
 
 // Create a udp tunnel
@@ -137,14 +138,18 @@ func (udpTunnel *UdpTunnel) Status() TunnelStatus {
 
 func (udpTunnel *UdpTunnel) Run() {
 	udpTunnel.ctx, udpTunnel.ctxCancel = context.WithCancel(context.Background())
+	udpTunnel.wg.Add(1)
 	go udpTunnel.writeToLocal()
+	udpTunnel.wg.Add(1)
 	go udpTunnel.readFromRemote()
+	udpTunnel.wg.Add(1)
 	go udpTunnel.writeToRemote()
 	udpTunnel.SetStatus(StatusProxying)
 }
 
 // Write udp packet to upstream
 func (udpTunnel *UdpTunnel) writeToRemote() {
+	defer udpTunnel.wg.Done()
 writeToRemote:
 	for {
 		select {
@@ -186,6 +191,7 @@ writeToRemote:
 
 // Read udp packet from upstream
 func (udpTunnel *UdpTunnel) readFromRemote() {
+	defer udpTunnel.wg.Done()
 readFromRemote:
 	for {
 		select {
@@ -218,6 +224,7 @@ readFromRemote:
 
 // Write upstream udp packet to local
 func (udpTunnel *UdpTunnel) writeToLocal() {
+	defer udpTunnel.wg.Done()
 writeToLocal:
 	for {
 		select {
@@ -247,8 +254,9 @@ writeToLocal:
 // Close this udp tunnel
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		udpTunnel.ctxCancel()
 		udpTunnel.SetStatus(StatusClosed)
+		udpTunnel.ctxCancel()
+		udpTunnel.wg.Wait()
 		udpTunnel.socks5TcpConn.Close()
 		udpTunnel.socks5UdpListen.Close()
 		udp.UDPNatList.Delete(udpTunnel.localAddr.Port)
