@@ -262,7 +262,7 @@ func (udpTunnel *UdpTunnel) Close(reason error) {
 		udpTunnel.SetStatus(StatusClosed)
 		udpTunnel.socks5TcpConn.Close()
 		udpTunnel.socks5UdpListen.Close()
-		udp.UDPNatList.DelUDPNat(udpTunnel.localAddr.Port)
+		udp.UDPNatList.Delete(udpTunnel.localAddr.Port)
 		close(udpTunnel.LocalPackets)
 		close(udpTunnel.RemotePackets)
 	})

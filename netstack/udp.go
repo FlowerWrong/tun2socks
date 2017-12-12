@@ -11,6 +11,7 @@ import (
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/tunnel"
 	"github.com/FlowerWrong/tun2socks/util"
+	"github.com/FlowerWrong/netstack/tcpip/stack"
 )
 
 // NewUDPEndpointAndListenIt create a UDP endpoint, bind it, then start read.
@@ -42,11 +43,16 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 			if !util.IsClosed(err) {
 				log.Println("Read from netstack failed", err)
 			}
-			udp.UDPNatList.DelUDPNat(localAddr.Port)
+			udp.UDPNatList.Delete(localAddr.Port)
 			continue
 		}
 
-		endpoint := udp.UDPNatList.GetUDPNat(localAddr.Port)
+		endpointInterface, ok := udp.UDPNatList.Load(localAddr.Port)
+		if !ok {
+			udp.UDPNatList.Delete(localAddr.Port)
+			continue
+		}
+		endpoint := endpointInterface.(stack.TransportEndpointID)
 		// TODO ipv6
 		remoteHost := endpoint.LocalAddress.To4().String()
 		contains, _ := IgnoreRanger.Contains(net.ParseIP(remoteHost))
@@ -68,7 +74,7 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 					if err != nil {
 						log.Println("Write to tun failed", err)
 					} else {
-						udp.UDPNatList.DelUDPNat(localAddr.Port)
+						udp.UDPNatList.Delete(localAddr.Port)
 						continue
 					}
 				}
@@ -78,7 +84,7 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 		udpTunnel, e := tunnel.NewUdpTunnel(endpoint, localAddr, app)
 		if e != nil {
 			log.Println("NewUdpTunnel failed", e)
-			udp.UDPNatList.DelUDPNat(localAddr.Port)
+			udp.UDPNatList.Delete(localAddr.Port)
 			continue
 		}
 		go udpTunnel.Run()
