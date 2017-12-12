@@ -93,9 +93,9 @@ func (tcpTunnel *TcpTunnel) SetRemoteStatus(s TunnelStatus) {
 
 // Get tcp tunnel status with rwMutex
 func (tcpTunnel *TcpTunnel) RemoteStatus() TunnelStatus {
-	tcpTunnel.remoteRwMutex.Lock()
+	tcpTunnel.remoteRwMutex.RLock()
 	s := tcpTunnel.remoteStatus
-	tcpTunnel.remoteRwMutex.Unlock()
+	tcpTunnel.remoteRwMutex.RUnlock()
 	return s
 }
 
@@ -108,9 +108,9 @@ func (tcpTunnel *TcpTunnel) SetLocalEndpointStatus(s TunnelStatus) {
 
 // Get tcp tunnel status with rwMutex
 func (tcpTunnel *TcpTunnel) LocalEndpointStatus() TunnelStatus {
-	tcpTunnel.localEndpointRwMutex.Lock()
+	tcpTunnel.localEndpointRwMutex.RLock()
 	s := tcpTunnel.localEndpointStatus
-	tcpTunnel.localEndpointRwMutex.Unlock()
+	tcpTunnel.localEndpointRwMutex.RUnlock()
 	return s
 }
 

@@ -129,9 +129,9 @@ func (udpTunnel *UdpTunnel) SetStatus(s TunnelStatus) {
 
 // Get udp tunnel status with rwMutex
 func (udpTunnel *UdpTunnel) Status() TunnelStatus {
-	udpTunnel.rwMutex.Lock()
+	udpTunnel.rwMutex.RLock()
 	s := udpTunnel.status
-	udpTunnel.rwMutex.Unlock()
+	udpTunnel.rwMutex.RUnlock()
 	return s
 }
 
