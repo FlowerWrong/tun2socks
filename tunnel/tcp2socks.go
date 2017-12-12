@@ -263,10 +263,10 @@ func (tcpTunnel *TcpTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
 		tcpTunnel.ctxCancel()
 
+		tcpTunnel.wg.Wait()
+
 		tcpTunnel.SetLocalEndpointStatus(StatusClosed)
 		tcpTunnel.SetRemoteStatus(StatusClosed)
-
-		tcpTunnel.wg.Wait()
 
 		tcpTunnel.localEndpoint.Close()
 		tcpTunnel.remoteConn.Close()

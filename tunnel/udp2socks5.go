@@ -254,9 +254,9 @@ writeToLocal:
 // Close this udp tunnel
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		udpTunnel.SetStatus(StatusClosed)
 		udpTunnel.ctxCancel()
 		udpTunnel.wg.Wait()
+		udpTunnel.SetStatus(StatusClosed)
 		udpTunnel.socks5TcpConn.Close()
 		udpTunnel.socks5UdpListen.Close()
 		udp.UDPNatList.Delete(udpTunnel.localAddr.Port)
