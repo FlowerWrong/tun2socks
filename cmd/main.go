@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"math/rand"
+	"os"
 	"runtime"
 	"time"
 
@@ -25,7 +26,15 @@ func main() {
 	configFile := *config
 	if configFile == "" {
 		configFile = flag.Arg(0)
+		if configFile == "" {
+			if runtime.GOOS == "linux" {
+				configFile = "/home/" + os.Getenv("SUDO_USER") + "/.tun2socks/config.ini"
+			} else if runtime.GOOS == "darwin" {
+				configFile = "/Users/" + os.Getenv("SUDO_USER") + "/.tun2socks/config.ini"
+			}
+		}
 	}
+	log.Println("config file is", configFile)
 
 	app := new(tun2socks.App)
 	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
