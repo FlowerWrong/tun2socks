@@ -5,12 +5,12 @@ import (
 	"net"
 
 	"github.com/FlowerWrong/netstack/tcpip"
+	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/netstack/waiter"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/tunnel"
 	"github.com/FlowerWrong/tun2socks/util"
-	"github.com/FlowerWrong/netstack/tcpip/stack"
 )
 
 // NewUDPEndpointAndListenIt create a UDP endpoint, bind it, then start read.
