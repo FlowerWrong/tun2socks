@@ -149,7 +149,7 @@ readFromLocal:
 			tcpTunnel.Close(errors.New("read from local failed" + err.String()))
 			break readFromLocal
 		}
-		if tcpTunnel.localEndpointStatus != StatusClosed {
+		if tcpTunnel.LocalEndpointStatus() != StatusClosed {
 			tcpTunnel.localPacketBuf <- v
 		} else {
 			break readFromLocal
@@ -203,7 +203,7 @@ readFromRemote:
 				break readFromRemote
 			}
 
-			if n > 0 && tcpTunnel.remoteStatus != StatusClosed {
+			if n > 0 && tcpTunnel.RemoteStatus() != StatusClosed {
 				tcpTunnel.remotePacketBuf <- buf[0:n]
 			} else {
 				break readFromRemote

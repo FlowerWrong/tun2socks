@@ -201,7 +201,7 @@ readFromRemote:
 					udpTunnel.Close(err)
 					break readFromRemote
 				}
-				if udpTunnel.status != StatusClosed {
+				if udpTunnel.Status() != StatusClosed {
 					udpTunnel.RemotePackets <- udpReq.Data
 				}
 			}
