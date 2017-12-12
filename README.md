@@ -31,7 +31,6 @@ NOTE: `go run` not support kill command signal.
 
 * [ ] ipv6 support
 * [ ] set and reset dns server to `127.0.0.1` automatically on windows, Raspberry Pi and android with shell
-* [ ] release
 
 ## Thanks
 
