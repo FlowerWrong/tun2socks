@@ -145,6 +145,9 @@ func (udpTunnel *UdpTunnel) Run() {
 	udpTunnel.wg.Add(1)
 	go udpTunnel.writeToRemote()
 	udpTunnel.SetStatus(StatusProxying)
+
+	udpTunnel.wg.Wait()
+	udpTunnel.Close(errors.New("OK"))
 }
 
 // Write udp packet to upstream
@@ -155,7 +158,7 @@ writeToRemote:
 		select {
 		case <-udpTunnel.ctx.Done():
 			break writeToRemote
-		case chunk := <-udpTunnel.LocalPackets:
+		case chunk := <-udpTunnel.LocalPackets: // TODO write n < len(chunk)
 			// TODO ipv6
 			remoteHost := udpTunnel.localEndpoint.LocalAddress.To4().String()
 			remotePort := udpTunnel.localEndpoint.LocalPort
@@ -185,6 +188,7 @@ writeToRemote:
 				udpTunnel.Close(err)
 				break writeToRemote
 			}
+			break writeToRemote
 		}
 	}
 }
@@ -210,6 +214,7 @@ readFromRemote:
 				if udpTunnel.Status() != StatusClosed {
 					udpTunnel.RemotePackets <- udpReq.Data
 				}
+				break readFromRemote
 			}
 			if err != nil {
 				if !util.IsEOF(err) {
@@ -243,8 +248,6 @@ writeToLocal:
 			if err != nil {
 				log.Println("Write udp package to tun failed", err)
 				udpTunnel.Close(err)
-			} else {
-				udpTunnel.Close(errors.New("OK"))
 			}
 			break writeToLocal
 		}
@@ -254,9 +257,8 @@ writeToLocal:
 // Close this udp tunnel
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		udpTunnel.ctxCancel()
-		udpTunnel.wg.Wait()
 		udpTunnel.SetStatus(StatusClosed)
+		udpTunnel.ctxCancel()
 		udpTunnel.socks5TcpConn.Close()
 		udpTunnel.socks5UdpListen.Close()
 		udp.UDPNatList.Delete(udpTunnel.localAddr.Port)

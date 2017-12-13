@@ -128,37 +128,45 @@ func (tcpTunnel *TcpTunnel) Run() {
 	go tcpTunnel.readFromLocal()
 	tcpTunnel.SetRemoteStatus(StatusProxying)
 	tcpTunnel.SetLocalEndpointStatus(StatusProxying)
+
+	tcpTunnel.wg.Wait()
+	tcpTunnel.Close(errors.New("OK"))
 }
 
 // Read tcp packet form local netstack
 func (tcpTunnel *TcpTunnel) readFromLocal() {
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	tcpTunnel.wq.EventRegister(&waitEntry, waiter.EventIn)
-	defer tcpTunnel.wq.EventUnregister(&waitEntry)
 	defer tcpTunnel.wg.Done()
+	defer tcpTunnel.wq.EventUnregister(&waitEntry)
 
 readFromLocal:
 	for {
-		v, err := tcpTunnel.localEndpoint.Read(nil)
-		if err != nil {
-			if err == tcpip.ErrWouldBlock {
-				select {
-				case <-tcpTunnel.ctx.Done():
-					break readFromLocal
-				case <-notifyCh:
-					continue readFromLocal
+		select {
+		case <-tcpTunnel.ctx.Done():
+			break readFromLocal
+		default:
+			v, err := tcpTunnel.localEndpoint.Read(nil)
+			if err != nil {
+				if err == tcpip.ErrWouldBlock {
+					select {
+					case <-tcpTunnel.ctx.Done():
+						break readFromLocal
+					case <-notifyCh:
+						continue readFromLocal
+					}
 				}
+				if !util.IsClosed(err) {
+					log.Println("Read from local failed", err)
+				}
+				tcpTunnel.Close(errors.New("read from local failed" + err.String()))
+				break readFromLocal
 			}
-			if !util.IsClosed(err) {
-				log.Println("Read from local failed", err)
+			if tcpTunnel.LocalEndpointStatus() != StatusClosed {
+				tcpTunnel.localPacketBuf <- v
+			} else {
+				break readFromLocal
 			}
-			tcpTunnel.Close(errors.New("read from local failed" + err.String()))
-			break readFromLocal
-		}
-		if tcpTunnel.LocalEndpointStatus() != StatusClosed {
-			tcpTunnel.localPacketBuf <- v
-		} else {
-			break readFromLocal
 		}
 	}
 }
@@ -261,12 +269,10 @@ writeToLocal:
 // Close this tcp tunnel
 func (tcpTunnel *TcpTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
-		tcpTunnel.ctxCancel()
-
-		tcpTunnel.wg.Wait()
-
 		tcpTunnel.SetLocalEndpointStatus(StatusClosed)
 		tcpTunnel.SetRemoteStatus(StatusClosed)
+
+		tcpTunnel.ctxCancel()
 
 		tcpTunnel.localEndpoint.Close()
 		tcpTunnel.remoteConn.Close()

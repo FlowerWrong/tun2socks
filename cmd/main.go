@@ -68,5 +68,14 @@ func main() {
 		}(app)
 	}
 
+	app.WG.Add(1)
+	go func(app *tun2socks.App) {
+		for {
+			time.Sleep(10 * time.Second)
+			log.Println("Current goroutine count is", runtime.NumGoroutine())
+		}
+		app.WG.Done()
+	}(app)
+
 	app.WG.Wait()
 }
