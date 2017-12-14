@@ -3,9 +3,11 @@ package tunnel
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/FlowerWrong/tun2socks/util"
 
@@ -19,6 +21,9 @@ import (
 // Udp tunnel
 type UdpTunnel struct {
 	localEndpoint        stack.TransportEndpointID
+	remoteHost           string
+	remotePort           uint16
+	remoteHostType       byte
 	socks5TcpConn        *gosocks.SocksConn
 	socks5UdpListen      *net.UDPConn
 	RemotePackets        chan []byte // write to local
@@ -43,16 +48,18 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 
 	// TODO ipv6
 	remoteHost := endpoint.LocalAddress.To4().String()
+	var hostType byte = gosocks.SocksIPv4Host
 	proxy := ""
 	if app.FakeDns != nil {
 		ip := net.ParseIP(remoteHost)
 		record := app.FakeDns.DnsTablePtr.GetByIP(ip)
-
 		if record != nil {
 			if record.Proxy == "block" {
 				return nil, errors.New(record.Hostname + " is blocked")
 			}
 			proxy = app.Cfg.GetProxy(record.Proxy)
+			remoteHost = record.Hostname // domain
+			hostType = gosocks.SocksDomainHost
 		}
 	}
 
@@ -111,6 +118,9 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 
 	return &UdpTunnel{
 		localEndpoint:        endpoint,
+		remoteHost:           remoteHost,
+		remotePort:           endpoint.LocalPort,
+		remoteHostType:       hostType,
 		socks5TcpConn:        socks5TcpConn,
 		socks5UdpListen:      udpSocks5Listen,
 		RemotePackets:        make(chan []byte, PktChannelSize),
@@ -136,6 +146,20 @@ func (udpTunnel *UdpTunnel) Status() TunnelStatus {
 	return s
 }
 
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false // completed normally
+	case <-time.After(timeout):
+		return true // timed out
+	}
+}
+
 func (udpTunnel *UdpTunnel) Run() {
 	udpTunnel.ctx, udpTunnel.ctxCancel = context.WithCancel(context.Background())
 	udpTunnel.wg.Add(1)
@@ -146,7 +170,9 @@ func (udpTunnel *UdpTunnel) Run() {
 	go udpTunnel.writeToRemote()
 	udpTunnel.SetStatus(StatusProxying)
 
-	udpTunnel.wg.Wait()
+	if waitTimeout(&udpTunnel.wg, 10*time.Second) {
+		fmt.Println("Timed out waiting for wait group", udpTunnel.remoteHost, udpTunnel.remotePort, udpTunnel.localAddr)
+	}
 	udpTunnel.Close(errors.New("OK"))
 }
 
@@ -159,25 +185,11 @@ writeToRemote:
 		case <-udpTunnel.ctx.Done():
 			break writeToRemote
 		case chunk := <-udpTunnel.LocalPackets: // TODO write n < len(chunk)
-			// TODO ipv6
-			remoteHost := udpTunnel.localEndpoint.LocalAddress.To4().String()
-			remotePort := udpTunnel.localEndpoint.LocalPort
-
-			var hostType byte = gosocks.SocksIPv4Host
-			if udpTunnel.app.FakeDns != nil {
-				ip := net.ParseIP(remoteHost)
-				record := udpTunnel.app.FakeDns.DnsTablePtr.GetByIP(ip)
-				if record != nil {
-					remoteHost = record.Hostname
-					hostType = gosocks.SocksDomainHost
-				}
-			}
-
 			req := &gosocks.UDPRequest{
 				Frag:     0,
-				HostType: hostType,
-				DstHost:  remoteHost,
-				DstPort:  remotePort,
+				HostType: udpTunnel.remoteHostType,
+				DstHost:  udpTunnel.remoteHost,
+				DstPort:  udpTunnel.remotePort,
 				Data:     chunk,
 			}
 			_, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
@@ -238,8 +250,7 @@ writeToLocal:
 		case chunk := <-udpTunnel.RemotePackets:
 			// TODO ipv6
 			remoteHost := udpTunnel.localEndpoint.LocalAddress.To4().String()
-			remotePort := udpTunnel.localEndpoint.LocalPort
-			pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, chunk)
+			pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), udpTunnel.remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, chunk)
 			if pkt == nil {
 				udpTunnel.Close(errors.New("pack ip packet return nil"))
 				break writeToLocal
