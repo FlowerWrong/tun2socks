@@ -23,6 +23,13 @@ type GeneralConfig struct {
 	Mtu     uint32
 }
 
+// PprofConfig ini
+type PprofConfig struct {
+	Enabled   bool
+	PprofHost string
+	PprofPort uint16
+}
+
 // DnsConfig ini
 type DnsConfig struct {
 	DnsMode         string   `gcfg:"dns-mode"`
@@ -61,6 +68,7 @@ type UdpConfig struct {
 
 type AppConfig struct {
 	General GeneralConfig
+	Pprof   PprofConfig
 	Dns     DnsConfig
 	Udp     UdpConfig
 	Route   RouteConfig
@@ -80,6 +88,10 @@ func (cfg *AppConfig) Parse(filename string) error {
 	// set default value
 	cfg.General.Network = "198.18.0.0/15"
 	cfg.General.Mtu = 1500
+
+	cfg.Pprof.Enabled = true
+	cfg.Pprof.PprofHost = "127.0.0.1"
+	cfg.Pprof.PprofPort = 6060
 
 	cfg.Dns.DnsMode = "fake"
 	cfg.Dns.DnsPort = DnsDefaultPort

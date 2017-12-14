@@ -3,8 +3,6 @@ package tunnel
 import "time"
 
 var DefaultConnectDuration = 1 * time.Second
-var DefaultReadWriteTimeout = time.Now().Add(time.Second * 30)
-var DefaultReadWriteDuration = 10 * time.Second
 var WithoutTimeout = time.Time{}
 
 type TunnelStatus uint
@@ -20,4 +18,4 @@ const (
 )
 
 const BuffSize = 1500
-const PktChannelSize = BuffSize * 64
+const PktChannelSize = BuffSize * 4

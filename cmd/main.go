@@ -8,10 +8,13 @@ import (
 	"runtime"
 	"time"
 
+	"fmt"
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/tun2socks/netstack"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 func main() {
@@ -68,14 +71,15 @@ func main() {
 		}(app)
 	}
 
-	app.WG.Add(1)
-	go func(app *tun2socks.App) {
-		for {
-			time.Sleep(10 * time.Second)
-			log.Println("Current goroutine count is", runtime.NumGoroutine())
-		}
-		app.WG.Done()
-	}(app)
+	if app.Cfg.Pprof.Enabled {
+		app.WG.Add(1)
+		go func(app *tun2socks.App) {
+			pprofAddr := fmt.Sprintf("%s:%d", app.Cfg.Pprof.PprofHost, app.Cfg.Pprof.PprofPort)
+			log.Println("Http pprof listen on", pprofAddr, " see", fmt.Sprintf("http://%s/debug/pprof/", pprofAddr))
+			http.ListenAndServe(pprofAddr, nil)
+			app.WG.Done()
+		}(app)
+	}
 
 	app.WG.Wait()
 }
