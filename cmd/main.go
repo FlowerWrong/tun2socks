@@ -74,7 +74,7 @@ func main() {
 	if app.Cfg.Pprof.Enabled {
 		app.WG.Add(1)
 		go func(app *tun2socks.App) {
-			pprofAddr := fmt.Sprintf("%s:%d", app.Cfg.Pprof.PprofHost, app.Cfg.Pprof.PprofPort)
+			pprofAddr := fmt.Sprintf("%s:%d", app.Cfg.Pprof.ProfHost, app.Cfg.Pprof.ProfPort)
 			log.Println("Http pprof listen on", pprofAddr, " see", fmt.Sprintf("http://%s/debug/pprof/", pprofAddr))
 			http.ListenAndServe(pprofAddr, nil)
 			app.WG.Done()

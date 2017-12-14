@@ -25,9 +25,9 @@ type GeneralConfig struct {
 
 // PprofConfig ini
 type PprofConfig struct {
-	Enabled   bool
-	PprofHost string
-	PprofPort uint16
+	Enabled  bool
+	ProfHost string `gcfg:"prof-host"`
+	ProfPort uint16 `gcfg:"prof-port"`
 }
 
 // DnsConfig ini
@@ -90,8 +90,8 @@ func (cfg *AppConfig) Parse(filename string) error {
 	cfg.General.Mtu = 1500
 
 	cfg.Pprof.Enabled = true
-	cfg.Pprof.PprofHost = "127.0.0.1"
-	cfg.Pprof.PprofPort = 6060
+	cfg.Pprof.ProfHost = "127.0.0.1"
+	cfg.Pprof.ProfPort = 6060
 
 	cfg.Dns.DnsMode = "fake"
 	cfg.Dns.DnsPort = DnsDefaultPort
