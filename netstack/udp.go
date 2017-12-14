@@ -59,13 +59,18 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 			continue
 		}
 
-		udpTunnel, e := tunnel.NewUdpTunnel(endpoint, localAddr, app)
+		udpTunnel, existFlag, e := tunnel.NewUdpTunnel(endpoint, localAddr, app)
 		if e != nil {
 			log.Println("NewUdpTunnel failed", e)
 			udp.UDPNatList.Delete(localAddr.Port)
 			continue
 		}
-		go udpTunnel.Run()
-		udpTunnel.LocalPackets <- v
+		length := 0
+		tunnel.UdpTunnelList.Range(func(_, _ interface{}) bool {
+			length++
+			return true
+		})
+		log.Println("There are", length, "udp tunnel")
+		go udpTunnel.Run(v, existFlag)
 	}
 }

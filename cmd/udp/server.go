@@ -24,20 +24,23 @@ func main() {
 	defer udpConn.Close()
 	log.Println("Listen UDP on 0.0.0.0", port)
 
-	for {
-		handleClient(udpConn)
-	}
-}
+	readedLen := 0
+	writedLen := 0
 
-func handleClient(conn *net.UDPConn) {
-	var buf [2048]byte
-	// conn.SetDeadline(time.Time{}) no time out
-	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	n, remote, err := conn.ReadFromUDP(buf[0:])
-	if err != nil {
-		log.Println("Error Reading", err)
-	} else {
-		log.Println(string(buf[0:n]), "from", remote)
+	for {
+		var buf [1500]byte
+		// conn.SetDeadline(time.Time{}) no time out
+		udpConn.SetReadDeadline(time.Now().Add(10 * time.Second))
+		n, remote, err := udpConn.ReadFromUDP(buf[0:])
+		if err != nil {
+			log.Println("Error Reading", err)
+		}
+		readedLen += n
+		m, err := udpConn.WriteToUDP(buf[0:n], remote)
+		if err != nil {
+			log.Println("Error Writing", err)
+		}
+		writedLen += m
+		log.Println("readedLen", readedLen, " <->  writedLen", writedLen)
 	}
-	conn.WriteToUDP(buf[:n], remote)
 }

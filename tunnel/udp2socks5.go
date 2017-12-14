@@ -4,43 +4,51 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
-	"net"
-	"sync"
-	"time"
-
-	"github.com/FlowerWrong/tun2socks/util"
-
 	"github.com/FlowerWrong/netstack/tcpip"
+	"github.com/FlowerWrong/netstack/tcpip/buffer"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
+	"github.com/FlowerWrong/tun2socks/util"
 	"github.com/yinghuocho/gosocks"
+	"log"
+	"net"
+	"strings"
+	"sync"
+	"time"
 )
+
+var UdpTunnelList sync.Map // id -> *UdpTunnel
 
 // Udp tunnel
 type UdpTunnel struct {
+	id                   string
 	localEndpoint        stack.TransportEndpointID
-	remoteHost           string
+	remoteHost           string // ip or domain
 	remotePort           uint16
-	remoteHostType       byte
+	remoteHostType       byte // ipv4 ipv6 or domain
 	socks5TcpConn        *gosocks.SocksConn
 	socks5UdpListen      *net.UDPConn
-	RemotePackets        chan []byte // write to local
-	LocalPackets         chan []byte // write to remote, socks5
 	ctx                  context.Context
 	ctxCancel            context.CancelFunc
 	localAddr            tcpip.FullAddress
 	cmdUDPAssociateReply *gosocks.SocksReply
 	closeOne             sync.Once
-	status               TunnelStatus // to avoid panic: send on closed channel
-	rwMutex              sync.RWMutex
 	app                  *tun2socks.App
 	wg                   sync.WaitGroup
+	localBufLen          int
+	remoteBufLen         int
+}
+
+func id(remoteHost string, remotePort uint16, localAddr tcpip.FullAddress) string {
+	return strings.Join([]string{
+		fmt.Sprintf("%s:%d", localAddr.Addr.To4().String(), localAddr.Port),
+		fmt.Sprintf("%s:%d", remoteHost, remotePort),
+	}, "<->")
 }
 
 // Create a udp tunnel
-func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, app *tun2socks.App) (*UdpTunnel, error) {
+func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, app *tun2socks.App) (*UdpTunnel, bool, error) {
 	localTcpSocks5Dialer := &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
 		Timeout: DefaultConnectDuration,
@@ -55,12 +63,18 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		record := app.FakeDns.DnsTablePtr.GetByIP(ip)
 		if record != nil {
 			if record.Proxy == "block" {
-				return nil, errors.New(record.Hostname + " is blocked")
+				return nil, false, errors.New(record.Hostname + " is blocked")
 			}
 			proxy = app.Cfg.GetProxy(record.Proxy)
 			remoteHost = record.Hostname // domain
 			hostType = gosocks.SocksDomainHost
 		}
+	}
+
+	udpId := id(remoteHost, endpoint.LocalPort, localAddr)
+	tunnel, ok := UdpTunnelList.Load(udpId)
+	if ok && tunnel != nil {
+		return tunnel.(*UdpTunnel), true, nil
 	}
 
 	if proxy == "" {
@@ -70,7 +84,7 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 	socks5TcpConn, err := localTcpSocks5Dialer.Dial(proxy)
 	if err != nil {
 		log.Println("Fail to connect SOCKS proxy ", err)
-		return nil, err
+		return nil, false, err
 	}
 
 	udpSocks5Addr := socks5TcpConn.LocalAddr().(*net.TCPAddr)
@@ -82,7 +96,7 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 	if err != nil {
 		log.Println("ListenUDP falied", err)
 		socks5TcpConn.Close()
-		return nil, err
+		return nil, false, err
 	}
 	udpSocks5Listen.SetDeadline(WithoutTimeout)
 
@@ -97,7 +111,7 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		log.Println("WriteSocksRequest failed", err)
 		socks5TcpConn.Close()
 		udpSocks5Listen.Close()
-		return nil, err
+		return nil, false, err
 	}
 
 	cmdUDPAssociateReply, err := gosocks.ReadSocksReply(socks5TcpConn)
@@ -105,116 +119,74 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		log.Println("ReadSocksReply failed", err)
 		socks5TcpConn.Close()
 		udpSocks5Listen.Close()
-		return nil, err
+		return nil, false, err
 	}
 	if cmdUDPAssociateReply.Rep != gosocks.SocksSucceeded {
 		log.Printf("socks connect request fail, retcode: %d", cmdUDPAssociateReply.Rep)
 		socks5TcpConn.Close()
 		udpSocks5Listen.Close()
-		return nil, err
+		return nil, false, err
 	}
 	// A zero value for t means I/O operations will not time out.
 	socks5TcpConn.SetDeadline(WithoutTimeout)
 
-	return &UdpTunnel{
+	udpTunnel := UdpTunnel{
+		id:                   id(remoteHost, endpoint.LocalPort, localAddr),
 		localEndpoint:        endpoint,
 		remoteHost:           remoteHost,
 		remotePort:           endpoint.LocalPort,
 		remoteHostType:       hostType,
 		socks5TcpConn:        socks5TcpConn,
 		socks5UdpListen:      udpSocks5Listen,
-		RemotePackets:        make(chan []byte, PktChannelSize),
-		LocalPackets:         make(chan []byte, PktChannelSize),
 		localAddr:            localAddr,
 		app:                  app,
 		cmdUDPAssociateReply: cmdUDPAssociateReply,
-	}, nil
-}
-
-// Set udp tunnel status with rwMutex
-func (udpTunnel *UdpTunnel) SetStatus(s TunnelStatus) {
-	udpTunnel.rwMutex.Lock()
-	udpTunnel.status = s
-	udpTunnel.rwMutex.Unlock()
-}
-
-// Get udp tunnel status with rwMutex
-func (udpTunnel *UdpTunnel) Status() TunnelStatus {
-	udpTunnel.rwMutex.RLock()
-	s := udpTunnel.status
-	udpTunnel.rwMutex.RUnlock()
-	return s
-}
-
-func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return false // completed normally
-	case <-time.After(timeout):
-		return true // timed out
+		localBufLen:          0,
+		remoteBufLen:         0,
 	}
-}
-
-func (udpTunnel *UdpTunnel) Run() {
 	udpTunnel.ctx, udpTunnel.ctxCancel = context.WithCancel(context.Background())
-	udpTunnel.wg.Add(1)
-	go udpTunnel.writeToLocal()
-	udpTunnel.wg.Add(1)
-	go udpTunnel.readFromRemote()
-	udpTunnel.wg.Add(1)
-	go udpTunnel.writeToRemote()
-	udpTunnel.SetStatus(StatusProxying)
+	UdpTunnelList.Store(udpTunnel.id, &udpTunnel)
 
-	if waitTimeout(&udpTunnel.wg, 10*time.Second) {
-		fmt.Println("Timed out waiting for wait group", udpTunnel.remoteHost, udpTunnel.remotePort, udpTunnel.localAddr)
-	}
-	udpTunnel.Close(errors.New("OK"))
+	return &udpTunnel, false, nil
 }
 
-// Write udp packet to upstream
-func (udpTunnel *UdpTunnel) writeToRemote() {
-	defer udpTunnel.wg.Done()
-writeToRemote:
-	for {
-		select {
-		case <-udpTunnel.ctx.Done():
-			break writeToRemote
-		case chunk := <-udpTunnel.LocalPackets: // TODO write n < len(chunk)
-			req := &gosocks.UDPRequest{
-				Frag:     0,
-				HostType: udpTunnel.remoteHostType,
-				DstHost:  udpTunnel.remoteHost,
-				DstPort:  udpTunnel.remotePort,
-				Data:     chunk,
-			}
-			_, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
-			if err != nil {
-				if !util.IsEOF(err) {
-					log.Println("WriteTo UDP tunnel failed", err)
-				}
-				udpTunnel.Close(err)
-				break writeToRemote
-			}
-			break writeToRemote
+func (udpTunnel *UdpTunnel) Run(v buffer.View, existFlag bool) {
+	req := &gosocks.UDPRequest{
+		Frag:     0,
+		HostType: udpTunnel.remoteHostType,
+		DstHost:  udpTunnel.remoteHost,
+		DstPort:  udpTunnel.remotePort,
+		Data:     v,
+	}
+	_, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
+	if err != nil {
+		if !util.IsEOF(err) {
+			log.Println("WriteTo UDP tunnel failed", err)
+			udpTunnel.Close(err)
 		}
 	}
+	udpTunnel.localBufLen += len(v)
+
+	if !existFlag {
+		udpTunnel.wg.Add(1)
+		go udpTunnel.ReadFromRemoteWriteToLocal()
+
+		udpTunnel.wg.Wait()
+		udpTunnel.Close(errors.New("OK"))
+	}
 }
 
-// Read udp packet from upstream
-func (udpTunnel *UdpTunnel) readFromRemote() {
+func (udpTunnel *UdpTunnel) ReadFromRemoteWriteToLocal() {
 	defer udpTunnel.wg.Done()
+	var udpSocks5Buf [PktChannelSize]byte
+
 readFromRemote:
 	for {
 		select {
 		case <-udpTunnel.ctx.Done():
 			break readFromRemote
 		default:
-			var udpSocks5Buf [PktChannelSize]byte
+			udpTunnel.socks5UdpListen.SetReadDeadline(time.Now().Add(10 * time.Second))
 			n, _, err := udpTunnel.socks5UdpListen.ReadFromUDP(udpSocks5Buf[0:])
 			if n > 0 {
 				udpReq, err := gosocks.ParseUDPRequest(udpSocks5Buf[0:n])
@@ -223,44 +195,29 @@ readFromRemote:
 					udpTunnel.Close(err)
 					break readFromRemote
 				}
-				if udpTunnel.Status() != StatusClosed {
-					udpTunnel.RemotePackets <- udpReq.Data
+				udpTunnel.remoteBufLen += len(udpReq.Data)
+				remoteHost := udpTunnel.localEndpoint.LocalAddress.To4().String()
+				pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), udpTunnel.remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, udpReq.Data)
+				if pkt == nil {
+					udpTunnel.Close(errors.New("pack ip packet return nil"))
+					break readFromRemote
+				} else {
+					_, err := udpTunnel.app.Ifce.Write(pkt)
+					if err != nil {
+						log.Println("Write udp package to tun failed", err)
+						udpTunnel.Close(err)
+						break readFromRemote
+					}
 				}
-				break readFromRemote
 			}
 			if err != nil {
 				if !util.IsEOF(err) {
-					log.Println("ReadFromUDP tunnel failed", err)
+					log.Println("ReadFromUDP tunnel failed", err, udpTunnel.id)
 				}
 				udpTunnel.Close(err)
 				break readFromRemote
 			}
-		}
-	}
-}
-
-// Write upstream udp packet to local
-func (udpTunnel *UdpTunnel) writeToLocal() {
-	defer udpTunnel.wg.Done()
-writeToLocal:
-	for {
-		select {
-		case <-udpTunnel.ctx.Done():
-			break writeToLocal
-		case chunk := <-udpTunnel.RemotePackets:
-			// TODO ipv6
-			remoteHost := udpTunnel.localEndpoint.LocalAddress.To4().String()
-			pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), udpTunnel.remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, chunk)
-			if pkt == nil {
-				udpTunnel.Close(errors.New("pack ip packet return nil"))
-				break writeToLocal
-			}
-			_, err := udpTunnel.app.Ifce.Write(pkt)
-			if err != nil {
-				log.Println("Write udp package to tun failed", err)
-				udpTunnel.Close(err)
-			}
-			break writeToLocal
+			udpTunnel.socks5UdpListen.SetReadDeadline(time.Time{})
 		}
 	}
 }
@@ -268,12 +225,11 @@ writeToLocal:
 // Close this udp tunnel
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		udpTunnel.SetStatus(StatusClosed)
+		log.Println("LocalBufLen", udpTunnel.localBufLen, " remoteBufLen", udpTunnel.remoteBufLen)
+		UdpTunnelList.Delete(udpTunnel.id)
 		udpTunnel.ctxCancel()
 		udpTunnel.socks5TcpConn.Close()
 		udpTunnel.socks5UdpListen.Close()
 		udp.UDPNatList.Delete(udpTunnel.localAddr.Port)
-		close(udpTunnel.LocalPackets)
-		close(udpTunnel.RemotePackets)
 	})
 }
