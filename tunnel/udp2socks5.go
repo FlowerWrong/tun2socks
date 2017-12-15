@@ -4,6 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"net"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/buffer"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
@@ -11,16 +17,12 @@ import (
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
 	"github.com/yinghuocho/gosocks"
-	"log"
-	"net"
-	"strings"
-	"sync"
-	"time"
 )
 
-var UdpTunnelList sync.Map // id -> *UdpTunnel
+// UdpTunnelList id -> *UdpTunnel
+var UdpTunnelList sync.Map
 
-// Udp tunnel
+// UdpTunnel timeout read
 type UdpTunnel struct {
 	id                   string
 	localEndpoint        stack.TransportEndpointID
@@ -47,7 +49,7 @@ func id(remoteHost string, remotePort uint16, localAddr tcpip.FullAddress) strin
 	}, "<->")
 }
 
-// Create a udp tunnel
+// NewUdpTunnel Create a udp tunnel
 func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, app *tun2socks.App) (*UdpTunnel, bool, error) {
 	localTcpSocks5Dialer := &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
@@ -225,7 +227,6 @@ readFromRemote:
 // Close this udp tunnel
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		log.Println("LocalBufLen", udpTunnel.localBufLen, " remoteBufLen", udpTunnel.remoteBufLen)
 		UdpTunnelList.Delete(udpTunnel.id)
 		udpTunnel.ctxCancel()
 		udpTunnel.socks5TcpConn.Close()

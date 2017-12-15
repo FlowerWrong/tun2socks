@@ -2,19 +2,19 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"time"
 
-	"fmt"
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/tun2socks/netstack"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
-	"net/http"
-	_ "net/http/pprof"
 )
 
 func main() {
