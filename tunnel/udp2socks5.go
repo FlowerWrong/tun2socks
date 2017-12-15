@@ -160,14 +160,23 @@ func (udpTunnel *UdpTunnel) Run(v buffer.View, existFlag bool) {
 		DstPort:  udpTunnel.remotePort,
 		Data:     v,
 	}
-	_, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
-	if err != nil {
-		if !util.IsEOF(err) {
-			log.Println("WriteTo UDP tunnel failed", err)
-			udpTunnel.Close(err)
+
+writeAllPacket:
+	for {
+		n, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
+		if err != nil {
+			if !util.IsEOF(err) {
+				log.Println("WriteTo UDP tunnel failed", err)
+				udpTunnel.Close(err)
+			}
 		}
+		udpTunnel.localBufLen += n
+		if n < len(v) {
+			v = v[n:]
+			continue writeAllPacket
+		}
+		break writeAllPacket
 	}
-	udpTunnel.localBufLen += len(v)
 
 	if !existFlag {
 		udpTunnel.wg.Add(1)
@@ -204,10 +213,15 @@ readFromRemote:
 					udpTunnel.Close(errors.New("pack ip packet return nil"))
 					break readFromRemote
 				} else {
-					_, err := udpTunnel.app.Ifce.Write(pkt)
+					n, err := udpTunnel.app.Ifce.Write(pkt)
 					if err != nil {
 						log.Println("Write udp package to tun failed", err)
 						udpTunnel.Close(err)
+						break readFromRemote
+					}
+					if n < len(pkt) {
+						log.Println("Write udp package to tun failed", n, "<", len(pkt))
+						udpTunnel.Close(errors.New("write udp package to tun failed, just write success part of pkt"))
 						break readFromRemote
 					}
 				}
