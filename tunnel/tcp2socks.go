@@ -33,7 +33,6 @@ type TcpTunnel struct {
 func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, app *tun2socks.App) (*TcpTunnel, error) {
 	socks5Conn, err := NewSocks5Conneciton(ip, port, app)
 	if err != nil {
-		log.Println("New socks5 conn failed", err)
 		return nil, err
 	}
 
