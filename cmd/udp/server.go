@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net"
-	"time"
 )
 
 func main() {
@@ -29,8 +28,6 @@ func main() {
 
 	for {
 		var buf [1500]byte
-		// conn.SetDeadline(time.Time{}) no time out
-		udpConn.SetReadDeadline(time.Now().Add(10 * time.Second))
 		n, remote, err := udpConn.ReadFromUDP(buf[0:])
 		if err != nil {
 			log.Println("Error Reading", err)

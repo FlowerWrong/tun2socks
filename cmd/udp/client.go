@@ -15,7 +15,7 @@ func main() {
 	var host = flag.String("host", "localhost", "host")
 	var port = flag.String("port", "6666", "port")
 	flag.Parse()
-	addr, err := net.ResolveUDPAddr("udp", *host+":"+*port)
+	addr, err := net.ResolveUDPAddr("udp", *host + ":" + *port)
 	if err != nil {
 		log.Println("Can't resolve address:", err)
 		os.Exit(1)
@@ -28,6 +28,25 @@ func main() {
 	defer conn.Close()
 
 	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func(conn *net.UDPConn) {
+		recvLen := 0
+		data := make([]byte, 1500)
+		for {
+			conn.SetReadDeadline(time.Now().Add(time.Second * 10))
+			n, err := conn.Read(data)
+			if err != nil {
+				log.Println("failed to read UDP msg because of", err)
+				break
+			}
+			recvLen += n
+			conn.SetReadDeadline(time.Time{})
+			log.Println("recvLen", recvLen, "read", n, "bytes")
+		}
+		log.Println("Total recv len", recvLen)
+		wg.Done()
+	}(conn)
 
 	wg.Add(1)
 	go func(conn *net.UDPConn) {
@@ -53,8 +72,8 @@ func main() {
 				sendData = sendData[writeLen:]
 				dataLen -= writeLen
 				writedLen += writeLen
-				// FIXME 写入大文件太快，tun设备会丢包
-				time.Sleep(time.Millisecond * 10)
+				// FIXME 写入大文件太快，会丢包
+				// time.Sleep(time.Millisecond * 10)
 			} else {
 				_, err = conn.Write(sendData[0:dataLen])
 				if err != nil {
@@ -66,25 +85,6 @@ func main() {
 			}
 			log.Println("writedLen", writedLen, " dataLen", dataLen)
 		}
-		wg.Done()
-	}(conn)
-
-	wg.Add(1)
-	go func(conn *net.UDPConn) {
-		recvLen := 0
-		data := make([]byte, 1500)
-		for {
-			conn.SetReadDeadline(time.Now().Add(time.Second * 10))
-			n, err := conn.Read(data)
-			if err != nil {
-				log.Println("failed to read UDP msg because of", err)
-				break
-			}
-			recvLen += n
-			conn.SetReadDeadline(time.Time{})
-			log.Println("recvLen", recvLen, "read", n, "bytes")
-		}
-		log.Println("Total recv len", recvLen)
 		wg.Done()
 	}(conn)
 

@@ -161,21 +161,18 @@ func (udpTunnel *UdpTunnel) Run(v buffer.View, existFlag bool) {
 		Data:     v,
 	}
 
-writeAllPacket:
-	for {
-		n, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
-		if err != nil {
-			if !util.IsEOF(err) {
-				log.Println("WriteTo UDP tunnel failed", err)
-				udpTunnel.Close(err)
-			}
+	n, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
+	if err != nil {
+		if !util.IsEOF(err) {
+			log.Println("WriteTo UDP tunnel failed", err)
+			udpTunnel.Close(err)
 		}
-		udpTunnel.localBufLen += n
-		if n < len(v) {
-			v = v[n:]
-			continue writeAllPacket
-		}
-		break writeAllPacket
+	}
+	dataLen := len(v)
+	udpTunnel.localBufLen += dataLen
+	if n <= len(v) {
+		log.Println("Only part pkt had been write to socks5", n, dataLen)
+		udpTunnel.Close(errors.New("write part error"))
 	}
 
 	if !existFlag {
@@ -241,6 +238,7 @@ readFromRemote:
 // Close this udp tunnel
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
+		log.Println(udpTunnel.localBufLen, udpTunnel.remoteBufLen)
 		UdpTunnelList.Delete(udpTunnel.id)
 		udpTunnel.ctxCancel()
 		udpTunnel.socks5TcpConn.Close()
