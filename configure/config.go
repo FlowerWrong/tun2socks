@@ -64,6 +64,7 @@ type ProxyConfig struct {
 type UdpConfig struct {
 	Proxy   string
 	Enabled bool
+	Timeout int
 }
 
 type AppConfig struct {
@@ -101,6 +102,7 @@ func (cfg *AppConfig) Parse(filename string) error {
 	cfg.Dns.DnsWriteTimeout = DnsDefaultWriteTimeout
 
 	cfg.Udp.Enabled = true
+	cfg.Udp.Timeout = 300
 
 	// decode config value
 	err := gcfg.ReadFileInto(cfg, filename)

@@ -194,7 +194,7 @@ readFromRemote:
 		case <-udpTunnel.ctx.Done():
 			break readFromRemote
 		default:
-			udpTunnel.socks5UdpListen.SetReadDeadline(time.Now().Add(10 * time.Second))
+			udpTunnel.socks5UdpListen.SetReadDeadline(time.Now().Add(time.Duration(udpTunnel.app.Cfg.Udp.Timeout) * time.Second))
 			n, _, err := udpTunnel.socks5UdpListen.ReadFromUDP(udpSocks5Buf[0:])
 			if n > 0 {
 				udpReq, err := gosocks.ParseUDPRequest(udpSocks5Buf[0:n])
@@ -230,7 +230,6 @@ readFromRemote:
 				udpTunnel.Close(err)
 				break readFromRemote
 			}
-			udpTunnel.socks5UdpListen.SetReadDeadline(time.Time{})
 		}
 	}
 }
@@ -238,7 +237,6 @@ readFromRemote:
 // Close this udp tunnel
 func (udpTunnel *UdpTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		log.Println(udpTunnel.localBufLen, udpTunnel.remoteBufLen)
 		UdpTunnelList.Delete(udpTunnel.id)
 		udpTunnel.ctxCancel()
 		udpTunnel.socks5TcpConn.Close()
