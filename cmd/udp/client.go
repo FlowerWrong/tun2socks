@@ -3,13 +3,30 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"sync"
 	"time"
 )
+
+var r *rand.Rand
+
+const BufSize = 1500
+
+func init() {
+	r = rand.New(rand.NewSource(time.Now().UnixNano()))
+}
+
+func RandomString(strlen int) []byte {
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	result := make([]byte, strlen)
+	for i := range result {
+		result[i] = chars[r.Intn(len(chars))]
+	}
+	return result
+}
 
 func main() {
 	var host = flag.String("host", "localhost", "host")
@@ -32,7 +49,7 @@ func main() {
 	wg.Add(1)
 	go func(conn *net.UDPConn) {
 		recvLen := 0
-		data := make([]byte, 1500)
+		data := make([]byte, BufSize)
 		for {
 			conn.SetReadDeadline(time.Now().Add(time.Second * 10))
 			n, err := conn.Read(data)
@@ -50,30 +67,25 @@ func main() {
 
 	wg.Add(1)
 	go func(conn *net.UDPConn) {
-		sendData, err := ioutil.ReadFile("GitHub.html")
-		if err != nil {
-			log.Println("read file failed", err)
-		}
+		sendData := RandomString(1000 * 300)
 		dataLen := len(sendData)
 		log.Println("Total len is", dataLen)
-		writeLen := 1500
 		writedLen := 0
 		for {
 			if dataLen <= 0 {
 				log.Println("write success")
 				break
 			}
-			if dataLen > 1500 {
-				_, err = conn.Write(sendData[0:writeLen])
+			if dataLen > BufSize {
+				_, err = conn.Write(sendData[0:BufSize])
 				if err != nil {
 					fmt.Println("failed:", err)
 					break
 				}
-				sendData = sendData[writeLen:]
-				dataLen -= writeLen
-				writedLen += writeLen
-				// FIXME 写入大文件太快，会丢包
-				// time.Sleep(time.Millisecond * 10)
+				sendData = sendData[BufSize:]
+				dataLen -= BufSize
+				writedLen += BufSize
+				time.Sleep(time.Millisecond * 10)
 			} else {
 				_, err = conn.Write(sendData[0:dataLen])
 				if err != nil {
