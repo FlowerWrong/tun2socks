@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-// Add subnet route
+// AddNetRoute add subnet route
 func AddNetRoute(_ string, subnet *net.IPNet) error {
 	// route ADD destination_network MASK subnet_mask gateway_ip metric_cost
 	ip := subnet.IP
@@ -15,7 +15,7 @@ func AddNetRoute(_ string, subnet *net.IPNet) error {
 	return nil
 }
 
-// Add host route
+// AddHostRoute add host route
 func AddHostRoute(_ string, host string) error {
 	sargs := fmt.Sprintf("add %s mask 255.255.255.255 %s", host, host)
 	return ExecCommand("route", sargs)

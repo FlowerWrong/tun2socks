@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	DnsDefaultPort         = 53
-	DnsDefaultTtl          = 600
-	DnsDefaultPacketSize   = 4096
-	DnsDefaultReadTimeout  = 5
-	DnsDefaultWriteTimeout = 5
-	DnsIPPoolMaxSpace      = 0x3ffff // 4*65535
+	DNSDefaultPort         = 53
+	DNSDefaultTTL          = 600
+	DNSDefaultPacketSize   = 4096
+	DNSDefaultReadTimeout  = 5
+	DNSDefaultWriteTimeout = 5
+	DNSIPPoolMaxSpace      = 0x3ffff // 4*65535
 )
 
 // GeneralConfig ini
@@ -30,14 +30,14 @@ type PprofConfig struct {
 	ProfPort uint16 `gcfg:"prof-port"`
 }
 
-// DnsConfig ini
-type DnsConfig struct {
-	DnsMode         string   `gcfg:"dns-mode"`
-	DnsPort         uint16   `gcfg:"dns-port"`
-	DnsTtl          uint     `gcfg:"dns-ttl"`
-	DnsPacketSize   uint16   `gcfg:"dns-packet-size"`
-	DnsReadTimeout  uint     `gcfg:"dns-read-timeout"`
-	DnsWriteTimeout uint     `gcfg:"dns-write-timeout"`
+// DNSConfig ini
+type DNSConfig struct {
+	DNSMode         string   `gcfg:"dns-mode"`
+	DNSPort         uint16   `gcfg:"dns-port"`
+	DNSTtl          uint     `gcfg:"dns-ttl"`
+	DNSPacketSize   uint16   `gcfg:"dns-packet-size"`
+	DNSReadTimeout  uint     `gcfg:"dns-read-timeout"`
+	DNSWriteTimeout uint     `gcfg:"dns-write-timeout"`
 	Nameserver      []string // backend dns
 }
 
@@ -57,11 +57,11 @@ type RuleConfig struct {
 }
 
 type ProxyConfig struct {
-	Url     string
+	URL     string
 	Default bool
 }
 
-type UdpConfig struct {
+type UDPConfig struct {
 	Proxy   string
 	Enabled bool
 	Timeout int
@@ -70,8 +70,8 @@ type UdpConfig struct {
 type AppConfig struct {
 	General GeneralConfig
 	Pprof   PprofConfig
-	Dns     DnsConfig
-	Udp     UdpConfig
+	DNS     DNSConfig
+	UDP     UDPConfig
 	Route   RouteConfig
 	Proxy   map[string]*ProxyConfig
 	Pattern map[string]*PatternConfig
@@ -94,15 +94,15 @@ func (cfg *AppConfig) Parse(filename string) error {
 	cfg.Pprof.ProfHost = "127.0.0.1"
 	cfg.Pprof.ProfPort = 6060
 
-	cfg.Dns.DnsMode = "fake"
-	cfg.Dns.DnsPort = DnsDefaultPort
-	cfg.Dns.DnsTtl = DnsDefaultTtl
-	cfg.Dns.DnsPacketSize = DnsDefaultPacketSize
-	cfg.Dns.DnsReadTimeout = DnsDefaultReadTimeout
-	cfg.Dns.DnsWriteTimeout = DnsDefaultWriteTimeout
+	cfg.DNS.DNSMode = "fake"
+	cfg.DNS.DNSPort = DNSDefaultPort
+	cfg.DNS.DNSTtl = DNSDefaultTTL
+	cfg.DNS.DNSPacketSize = DNSDefaultPacketSize
+	cfg.DNS.DNSReadTimeout = DNSDefaultReadTimeout
+	cfg.DNS.DNSWriteTimeout = DNSDefaultWriteTimeout
 
-	cfg.Udp.Enabled = true
-	cfg.Udp.Timeout = 300
+	cfg.UDP.Enabled = true
+	cfg.UDP.Timeout = 300
 
 	// decode config value
 	err := gcfg.ReadFileInto(cfg, filename)
@@ -111,9 +111,9 @@ func (cfg *AppConfig) Parse(filename string) error {
 	}
 
 	// set backend dns default value
-	if len(cfg.Dns.Nameserver) == 0 {
-		cfg.Dns.Nameserver = append(cfg.Dns.Nameserver, "114.114.114.114:53")
-		cfg.Dns.Nameserver = append(cfg.Dns.Nameserver, "223.5.5.5:53")
+	if len(cfg.DNS.Nameserver) == 0 {
+		cfg.DNS.Nameserver = append(cfg.DNS.Nameserver, "114.114.114.114:53")
+		cfg.DNS.Nameserver = append(cfg.DNS.Nameserver, "223.5.5.5:53")
 	}
 
 	err = cfg.check()
@@ -128,7 +128,7 @@ func (cfg *AppConfig) Parse(filename string) error {
 // GetProxy addr from name
 func (cfg *AppConfig) GetProxy(name string) string {
 	proxyConfig := cfg.Proxy[name]
-	url, err := url.Parse(proxyConfig.Url)
+	url, err := url.Parse(proxyConfig.URL)
 	if err != nil {
 		log.Println("Parse url failed", err)
 		return ""
@@ -139,7 +139,7 @@ func (cfg *AppConfig) GetProxy(name string) string {
 // DefaultPorxy return default proxy addr, eg: socks5://127.0.0.1:1080, return 127.0.0.1:1080
 func (cfg *AppConfig) DefaultPorxy() (string, error) {
 	proxyConfig := cfg.DefaultPorxyConfig()
-	u, err := url.Parse(proxyConfig.Url)
+	u, err := url.Parse(proxyConfig.URL)
 	if err != nil {
 		log.Println("Parse url failed", err)
 		return "", err
@@ -157,14 +157,14 @@ func (cfg *AppConfig) DefaultPorxyConfig() *ProxyConfig {
 	return nil
 }
 
-// UdpProxy return the configed udp proxy
-func (cfg *AppConfig) UdpProxy() (string, error) {
-	proxyConfig := cfg.Proxy[cfg.Udp.Proxy]
+// UDPProxy return the configed udp proxy
+func (cfg *AppConfig) UDPProxy() (string, error) {
+	proxyConfig := cfg.Proxy[cfg.UDP.Proxy]
 	if proxyConfig == nil {
 		proxyConfig = cfg.DefaultPorxyConfig()
 	}
 	if proxyConfig != nil {
-		u, err := url.Parse(proxyConfig.Url)
+		u, err := url.Parse(proxyConfig.URL)
 		if err != nil {
 			log.Println("Parse url failed", err)
 			return "", err

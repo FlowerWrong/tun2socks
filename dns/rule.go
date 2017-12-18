@@ -28,7 +28,7 @@ func (rule *Rule) Proxy(val interface{}) (bool, string) {
 	return false, rule.final
 }
 
-// reload rule
+// Reload rule config
 func (rule *Rule) Reload(config configure.RuleConfig, patterns map[string]*configure.PatternConfig) {
 	log.Println("Rule hot reloaded")
 	rule.patterns = rule.patterns[:0]

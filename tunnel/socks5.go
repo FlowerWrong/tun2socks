@@ -2,9 +2,13 @@ package tunnel
 
 import "time"
 
+// DefaultConnectDuration 1s
 var DefaultConnectDuration = 1 * time.Second
+
+// WithoutTimeout no timeout
 var WithoutTimeout = time.Time{}
 
+// TunnelStatus struct
 type TunnelStatus uint
 
 const (
@@ -17,5 +21,8 @@ const (
 	StatusClosed                               // 7
 )
 
+// BuffSize is default tcp and udp buffer size
 const BuffSize = 1500
+
+// PktChannelSize is default packet recv and send buffer size
 const PktChannelSize = BuffSize * 4

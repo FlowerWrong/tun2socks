@@ -14,8 +14,8 @@ import (
 	"github.com/FlowerWrong/tun2socks/util"
 )
 
-// Tcp tunnel
-type TcpTunnel struct {
+// TCPTunnel struct
+type TCPTunnel struct {
 	wq                   *waiter.Queue
 	localEndpoint        tcpip.Endpoint
 	localEndpointStatus  TunnelStatus // to avoid panic: send on closed channel
@@ -30,13 +30,13 @@ type TcpTunnel struct {
 	wg                   sync.WaitGroup
 }
 
-// Create a tcp tunnel
-func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, app *tun2socks.App) (*TcpTunnel, error) {
+// NewTCP2Socks create a tcp tunnel
+func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, app *tun2socks.App) (*TCPTunnel, error) {
 	var remoteAddr string
 	proxy := ""
 
-	if app.FakeDns != nil {
-		record := app.FakeDns.DnsTablePtr.GetByIP(ip)
+	if app.FakeDNS != nil {
+		record := app.FakeDNS.DNSTablePtr.GetByIP(ip)
 		if record != nil {
 			if record.Proxy == "block" {
 				return nil, errors.New(record.Hostname + " is blocked")
@@ -56,10 +56,10 @@ func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, a
 		log.Printf("[tcp] dial %s by proxy %q failed: %s", remoteAddr, proxy, err)
 		return nil, err
 	}
-	// socks5Conn.(*net.TCPConn).SetKeepAlive(true)
+	socks5Conn.(*net.TCPConn).SetKeepAlive(true)
 	socks5Conn.SetDeadline(WithoutTimeout)
 
-	return &TcpTunnel{
+	return &TCPTunnel{
 		wq:                   wq,
 		localEndpoint:        ep,
 		remoteConn:           socks5Conn,
@@ -69,38 +69,38 @@ func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, a
 	}, nil
 }
 
-// Set tcp tunnel status with rwMutex
-func (tcpTunnel *TcpTunnel) SetRemoteStatus(s TunnelStatus) {
+// SetRemoteStatus with rwMutex
+func (tcpTunnel *TCPTunnel) SetRemoteStatus(s TunnelStatus) {
 	tcpTunnel.remoteRwMutex.Lock()
 	tcpTunnel.remoteStatus = s
 	tcpTunnel.remoteRwMutex.Unlock()
 }
 
-// Get tcp tunnel status with rwMutex
-func (tcpTunnel *TcpTunnel) RemoteStatus() TunnelStatus {
+// RemoteStatus with rwMutex
+func (tcpTunnel *TCPTunnel) RemoteStatus() TunnelStatus {
 	tcpTunnel.remoteRwMutex.RLock()
 	s := tcpTunnel.remoteStatus
 	tcpTunnel.remoteRwMutex.RUnlock()
 	return s
 }
 
-// Set tcp tunnel status with rwMutex
-func (tcpTunnel *TcpTunnel) SetLocalEndpointStatus(s TunnelStatus) {
+// SetLocalEndpointStatus with rwMutex
+func (tcpTunnel *TCPTunnel) SetLocalEndpointStatus(s TunnelStatus) {
 	tcpTunnel.localEndpointRwMutex.Lock()
 	tcpTunnel.localEndpointStatus = s
 	tcpTunnel.localEndpointRwMutex.Unlock()
 }
 
-// Get tcp tunnel status with rwMutex
-func (tcpTunnel *TcpTunnel) LocalEndpointStatus() TunnelStatus {
+// LocalEndpointStatus with rwMutex
+func (tcpTunnel *TCPTunnel) LocalEndpointStatus() TunnelStatus {
 	tcpTunnel.localEndpointRwMutex.RLock()
 	s := tcpTunnel.localEndpointStatus
 	tcpTunnel.localEndpointRwMutex.RUnlock()
 	return s
 }
 
-// Start tcp tunnel
-func (tcpTunnel *TcpTunnel) Run() {
+// Run start tcp tunnel
+func (tcpTunnel *TCPTunnel) Run() {
 	tcpTunnel.ctx, tcpTunnel.ctxCancel = context.WithCancel(context.Background())
 	tcpTunnel.wg.Add(1)
 	go tcpTunnel.readFromRemoteWriteToLocal()
@@ -113,8 +113,7 @@ func (tcpTunnel *TcpTunnel) Run() {
 	tcpTunnel.Close(errors.New("OK"))
 }
 
-// Read tcp packet form local netstack
-func (tcpTunnel *TcpTunnel) readFromLocalWriteToRemote() {
+func (tcpTunnel *TCPTunnel) readFromLocalWriteToRemote() {
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	tcpTunnel.wq.EventRegister(&waitEntry, waiter.EventIn)
 	defer tcpTunnel.wg.Done()
@@ -170,8 +169,7 @@ readFromLocal:
 	}
 }
 
-// Read tcp packet from upstream
-func (tcpTunnel *TcpTunnel) readFromRemoteWriteToLocal() {
+func (tcpTunnel *TCPTunnel) readFromRemoteWriteToLocal() {
 	defer tcpTunnel.wg.Done()
 readFromRemote:
 	for {
@@ -227,7 +225,7 @@ readFromRemote:
 }
 
 // Close this tcp tunnel
-func (tcpTunnel *TcpTunnel) Close(reason error) {
+func (tcpTunnel *TCPTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
 		tcpTunnel.SetLocalEndpointStatus(StatusClosed)
 		tcpTunnel.SetRemoteStatus(StatusClosed)

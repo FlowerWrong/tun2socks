@@ -11,19 +11,20 @@ import (
 	"github.com/FlowerWrong/tun2socks/util"
 )
 
-type DnsIPPool struct {
+// DNSIPPool struct
+type DNSIPPool struct {
 	base  uint32
 	space uint32
 	flags []bool
 }
 
-// Dns ip pool capacity
-func (pool *DnsIPPool) Capacity() int {
+// Capacity is dns ip pool capacity
+func (pool *DNSIPPool) Capacity() int {
 	return int(pool.space)
 }
 
-// Check a ip is in or not in dns ip pool
-func (pool *DnsIPPool) Contains(ip net.IP) bool {
+// Contains check a ip is in or not in dns ip pool
+func (pool *DNSIPPool) Contains(ip net.IP) bool {
 	index := util.ConvertIPv4ToUint32(ip) - pool.base
 	if index < pool.space {
 		return true
@@ -32,15 +33,15 @@ func (pool *DnsIPPool) Contains(ip net.IP) bool {
 }
 
 // Release a ip from dns ip pool
-func (pool *DnsIPPool) Release(ip net.IP) {
+func (pool *DNSIPPool) Release(ip net.IP) {
 	index := util.ConvertIPv4ToUint32(ip) - pool.base
 	if index < pool.space {
 		pool.flags[index] = false
 	}
 }
 
-// use domain as a hint to find a stable index
-func (pool *DnsIPPool) Alloc(domain string) net.IP {
+// Alloc use domain as a hint to find a stable index
+func (pool *DNSIPPool) Alloc(domain string) net.IP {
 	index := adler32.Checksum([]byte(domain)) % pool.space
 	if pool.flags[index] {
 		log.Printf("[dns] %s is not in main index: %d", domain, index)
@@ -59,14 +60,15 @@ func (pool *DnsIPPool) Alloc(domain string) net.IP {
 	return util.ConvertUint32ToIPv4(pool.base + index)
 }
 
-func NewDnsIPPool(ip net.IP, subnet *net.IPNet) *DnsIPPool {
+// NewDNSIPPool create a dns ip pool
+func NewDNSIPPool(ip net.IP, subnet *net.IPNet) *DNSIPPool {
 	base := util.ConvertIPv4ToUint32(subnet.IP) + 1
 	max := base + ^util.ConvertIPv4ToUint32(net.IP(subnet.Mask))
 
 	// space should not over 0x3ffff
 	space := max - base
-	if space > configure.DnsIPPoolMaxSpace {
-		space = configure.DnsIPPoolMaxSpace
+	if space > configure.DNSIPPoolMaxSpace {
+		space = configure.DNSIPPoolMaxSpace
 	}
 	flags := make([]bool, space)
 
@@ -76,7 +78,7 @@ func NewDnsIPPool(ip net.IP, subnet *net.IPNet) *DnsIPPool {
 		flags[index] = true
 	}
 
-	return &DnsIPPool{
+	return &DNSIPPool{
 		base:  base,
 		space: space,
 		flags: flags,

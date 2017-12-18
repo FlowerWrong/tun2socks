@@ -47,26 +47,26 @@ func main() {
 
 	app.WG.Add(1)
 	go netstack.NewTCPEndpointAndListenIt(proto, app)
-	if app.Cfg.Udp.Enabled {
+	if app.Cfg.UDP.Enabled {
 		app.WG.Add(1)
-		_, err := app.Cfg.UdpProxy()
+		_, err := app.Cfg.UDPProxy()
 		if err != nil {
 			log.Fatal("Get udp socks 5 proxy failed", err)
 		}
 		go netstack.NewUDPEndpointAndListenIt(proto, app)
 	}
-	if app.Cfg.Dns.DnsMode == "fake" {
+	if app.Cfg.DNS.DNSMode == "fake" {
 		app.WG.Add(1)
 		go func(app *tun2socks.App) {
 			util.UpdateDNSServers(true)
-			app.FakeDns.Serve()
+			app.FakeDNS.Serve()
 			app.WG.Done()
 		}(app)
 
 		app.WG.Add(1)
 		go func(app *tun2socks.App) {
 			// clearExpiredNonProxyDomain and clearExpiredDomain
-			app.FakeDns.DnsTablePtr.Serve()
+			app.FakeDNS.DNSTablePtr.Serve()
 			app.WG.Done()
 		}(app)
 	}

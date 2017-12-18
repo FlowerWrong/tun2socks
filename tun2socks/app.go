@@ -13,7 +13,7 @@ import (
 )
 
 type App struct {
-	FakeDns  *dns.Dns
+	FakeDNS  *dns.DNS
 	Cfg      *configure.AppConfig
 	Proxies  *configure.Proxies
 	S        *stack.Stack
@@ -48,8 +48,8 @@ func (app *App) Config(configFile string) *App {
 		log.Fatal("Get default proxy failed", err)
 	}
 
-	if app.Cfg.Dns.DnsMode == "fake" {
-		app.FakeDns, err = dns.NewFakeDnsServer(app.Cfg)
+	if app.Cfg.DNS.DNSMode == "fake" {
+		app.FakeDNS, err = dns.NewFakeDNSServer(app.Cfg)
 		if err != nil {
 			log.Fatal("New fake dns server failed", err)
 		}

@@ -11,11 +11,13 @@ import (
 
 var errNoProxy = errors.New("no proxy")
 
+// Proxies struct
 type Proxies struct {
 	proxies map[string]*proxy.Proxy
 	Default string
 }
 
+// Dial a proxy
 func (p *Proxies) Dial(proxy string, addr string) (net.Conn, error) {
 	if proxy == "" {
 		return p.DefaultDial(addr)
@@ -28,6 +30,7 @@ func (p *Proxies) Dial(proxy string, addr string) (net.Conn, error) {
 	return nil, fmt.Errorf("invalid proxy: %s", proxy)
 }
 
+// DefaultDial of proxyies
 func (p *Proxies) DefaultDial(addr string) (net.Conn, error) {
 	dialer := p.proxies[p.Default]
 	if dialer == nil {
@@ -36,6 +39,7 @@ func (p *Proxies) DefaultDial(addr string) (net.Conn, error) {
 	return dialer.Dial("tcp", addr)
 }
 
+// Reload config
 func (p *Proxies) Reload(config map[string]*ProxyConfig) error {
 	log.Println("Proxies hot reloaded")
 	return p.setUp(config)
@@ -44,7 +48,7 @@ func (p *Proxies) Reload(config map[string]*ProxyConfig) error {
 func (p *Proxies) setUp(config map[string]*ProxyConfig) error {
 	proxies := make(map[string]*proxy.Proxy)
 	for name, item := range config {
-		proxy, err := proxy.FromUrl(item.Url)
+		proxy, err := proxy.FromUrl(item.URL)
 		if err != nil {
 			return err
 		}
@@ -59,6 +63,7 @@ func (p *Proxies) setUp(config map[string]*ProxyConfig) error {
 	return nil
 }
 
+// NewProxies crate a new proxyies
 func NewProxies(config map[string]*ProxyConfig) (*Proxies, error) {
 	p := &Proxies{}
 	err := p.setUp(config)

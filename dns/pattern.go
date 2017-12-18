@@ -18,6 +18,7 @@ const (
 	schemeIPCIDR        = "IP-CIDR"
 )
 
+// Pattern interface
 type Pattern interface {
 	Name() string
 	Proxy() string
@@ -161,7 +162,7 @@ func NewIPCountryPattern(name string, proxy string, vals []string) Pattern {
 	return p
 }
 
-// IPRangeArray
+// IPRange struct
 type IPRange struct {
 	Start uint32
 	End   uint32

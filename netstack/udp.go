@@ -59,9 +59,9 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 			continue
 		}
 
-		udpTunnel, existFlag, e := tunnel.NewUdpTunnel(endpoint, localAddr, app)
+		udpTunnel, existFlag, e := tunnel.NewUDPTunnel(endpoint, localAddr, app)
 		if e != nil {
-			log.Println("NewUdpTunnel failed", e)
+			log.Println("NewUDPTunnel failed", e)
 			udp.UDPNatList.Delete(localAddr.Port)
 			continue
 		}

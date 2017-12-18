@@ -24,16 +24,16 @@ const (
 
 // NewNetstack create a tcp/ip stack
 func NewNetstack(app *tun2socks.App) tcpip.NetworkProtocolNumber {
-	tunIp, _, _ := net.ParseCIDR(app.Cfg.General.Network)
+	tunIP, _, _ := net.ParseCIDR(app.Cfg.General.Network)
 
 	// Parse the IP address. Support both ipv4 and ipv6.
 	var addr tcpip.Address
 	var proto tcpip.NetworkProtocolNumber
-	if tunIp.To4() != nil {
-		addr = tcpip.Address(tunIp.To4())
+	if tunIP.To4() != nil {
+		addr = tcpip.Address(tunIP.To4())
 		proto = ipv4.ProtocolNumber
-	} else if tunIp.To16() != nil {
-		addr = tcpip.Address(tunIp.To16())
+	} else if tunIP.To16() != nil {
+		addr = tcpip.Address(tunIP.To16())
 		proto = ipv6.ProtocolNumber
 	} else {
 		log.Fatalf("Unknown IP type: %v", app.Cfg.General.Network)

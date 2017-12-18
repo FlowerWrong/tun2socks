@@ -16,14 +16,15 @@ import (
 	"github.com/xjdrew/proxy"
 )
 
-var resolveErr = errors.New("resolve error")
+var errResolve = errors.New("resolve error")
 
-type Dns struct {
+// DNS struct
+type DNS struct {
 	server      *dns.Server
 	client      *dns.Client
 	nameservers []string
 	RulePtr     *Rule
-	DnsTablePtr *DnsTable
+	DNSTablePtr *DNSTable
 }
 
 func isIPv4Query(q dns.Question) bool {
@@ -33,7 +34,7 @@ func isIPv4Query(q dns.Question) bool {
 	return false
 }
 
-func (d *Dns) resolve(r *dns.Msg) (*dns.Msg, error) {
+func (d *DNS) resolve(r *dns.Msg) (*dns.Msg, error) {
 	var wg sync.WaitGroup
 	msgCh := make(chan *dns.Msg, 1)
 
@@ -81,11 +82,11 @@ func (d *Dns) resolve(r *dns.Msg) (*dns.Msg, error) {
 		return r, nil
 	default:
 		log.Printf("[dns] query %s failed", qname)
-		return nil, resolveErr
+		return nil, errResolve
 	}
 }
 
-func (d *Dns) fillRealIP(record *DomainRecord, r *dns.Msg) {
+func (d *DNS) fillRealIP(record *DomainRecord, r *dns.Msg) {
 	// resolve
 	msg, err := d.resolve(r)
 	if err != nil || len(msg.Answer) == 0 {
@@ -94,15 +95,15 @@ func (d *Dns) fillRealIP(record *DomainRecord, r *dns.Msg) {
 	record.SetRealIP(msg)
 }
 
-func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
+func (d *DNS) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	domain := dnsutil.TrimDomainName(r.Question[0].Name, ".")
 	// if is a non-proxy-domain
-	if d.DnsTablePtr.IsNonProxyDomain(domain) {
+	if d.DNSTablePtr.IsNonProxyDomain(domain) {
 		return d.resolve(r)
 	}
 
 	// if have already hijacked
-	record := d.DnsTablePtr.Get(domain)
+	record := d.DNSTablePtr.Get(domain)
 	if record != nil {
 		return record.Answer(r), nil
 	}
@@ -112,7 +113,7 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 
 	// if domain use proxy
 	if matched && proxy != "" {
-		if record := d.DnsTablePtr.Set(domain, proxy); record != nil {
+		if record := d.DNSTablePtr.Set(domain, proxy); record != nil {
 			// go d.fillRealIP(record, r)
 			return record.Answer(r), nil
 		}
@@ -145,7 +146,7 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 		}
 		// if ip use proxy
 		if proxy != "" {
-			if record := d.DnsTablePtr.Set(domain, proxy); record != nil {
+			if record := d.DNSTablePtr.Set(domain, proxy); record != nil {
 				// record.SetRealIP(msg)
 				return record.Answer(r), nil
 			}
@@ -153,13 +154,13 @@ func (d *Dns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	}
 
 	// set domain as a non-proxy-domain
-	d.DnsTablePtr.SetNonProxyDomain(domain, msg.Answer[0].Header().Ttl)
+	d.DNSTablePtr.SetNonProxyDomain(domain, msg.Answer[0].Header().Ttl)
 
 	// final
 	return msg, err
 }
 
-func (d *Dns) handler(w dns.ResponseWriter, r *dns.Msg) {
+func (d *DNS) handler(w dns.ResponseWriter, r *dns.Msg) {
 	isIPv4 := isIPv4Query(r.Question[0])
 
 	var msg *dns.Msg
@@ -178,31 +179,33 @@ func (d *Dns) handler(w dns.ResponseWriter, r *dns.Msg) {
 	}
 }
 
-func (d *Dns) Serve() error {
+// Serve run a dns server
+func (d *DNS) Serve() error {
 	log.Printf("[dns] listen on %s", d.server.Addr)
 	return d.server.ListenAndServe()
 }
 
-func NewFakeDnsServer(cfg *configure.AppConfig) (*Dns, error) {
-	d := new(Dns)
+// NewFakeDNSServer create a fake dns srever with config
+func NewFakeDNSServer(cfg *configure.AppConfig) (*DNS, error) {
+	d := new(DNS)
 
 	server := &dns.Server{
 		Net:          "udp",
-		Addr:         fmt.Sprintf("%s:%d", net.IPv4zero, cfg.Dns.DnsPort),
+		Addr:         fmt.Sprintf("%s:%d", net.IPv4zero, cfg.DNS.DNSPort),
 		Handler:      dns.HandlerFunc(d.handler),
-		UDPSize:      int(cfg.Dns.DnsPacketSize),
-		ReadTimeout:  time.Duration(cfg.Dns.DnsReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.Dns.DnsWriteTimeout) * time.Second,
+		UDPSize:      int(cfg.DNS.DNSPacketSize),
+		ReadTimeout:  time.Duration(cfg.DNS.DNSReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.DNS.DNSWriteTimeout) * time.Second,
 	}
 
 	client := &dns.Client{
 		Net:          "udp",
-		UDPSize:      cfg.Dns.DnsPacketSize,
-		ReadTimeout:  time.Duration(cfg.Dns.DnsReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.Dns.DnsWriteTimeout) * time.Second,
+		UDPSize:      cfg.DNS.DNSPacketSize,
+		ReadTimeout:  time.Duration(cfg.DNS.DNSReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.DNS.DNSWriteTimeout) * time.Second,
 	}
 
-	d.nameservers = cfg.Dns.Nameserver
+	d.nameservers = cfg.DNS.Nameserver
 	d.server = server
 	d.client = client
 
@@ -211,11 +214,11 @@ func NewFakeDnsServer(cfg *configure.AppConfig) (*Dns, error) {
 	d.RulePtr = NewRule(cfg.Rule, cfg.Pattern)
 
 	// new dns cache
-	d.DnsTablePtr = NewDnsTable(ip, subnet)
+	d.DNSTablePtr = NewDnsTable(ip, subnet)
 
 	// don't hijack proxy domain
 	for _, item := range cfg.Proxy {
-		proxy, err := proxy.FromUrl(item.Url)
+		proxy, err := proxy.FromUrl(item.URL)
 		if err != nil {
 			return nil, err
 		}

@@ -11,7 +11,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-// hijacked domain
+// DomainRecord is hijacked domain struct
 type DomainRecord struct {
 	Hostname string // hostname
 	Proxy    string // proxy
@@ -50,12 +50,12 @@ func (record *DomainRecord) Answer(request *dns.Msg) *dns.Msg {
 
 func (record *DomainRecord) Touch() {
 	record.Hits++
-	record.Expires = time.Now().Add(configure.DnsDefaultTtl * time.Second)
+	record.Expires = time.Now().Add(configure.DNSDefaultTTL * time.Second)
 }
 
-type DnsTable struct {
+type DNSTable struct {
 	// dns ip pool
-	ipPool *DnsIPPool
+	ipPool *DNSIPPool
 
 	// hijacked domain records
 	records     map[string]*DomainRecord // domain -> record
@@ -66,7 +66,7 @@ type DnsTable struct {
 	npdLock         sync.Mutex           // protect non proxy domain
 }
 
-func (c *DnsTable) get(domain string) *DomainRecord {
+func (c *DNSTable) get(domain string) *DomainRecord {
 	record := c.records[domain]
 	if record != nil {
 		record.Touch()
@@ -74,7 +74,7 @@ func (c *DnsTable) get(domain string) *DomainRecord {
 	return record
 }
 
-func (c *DnsTable) GetByIP(ip net.IP) *DomainRecord {
+func (c *DNSTable) GetByIP(ip net.IP) *DomainRecord {
 	c.recordsLock.Lock()
 	defer c.recordsLock.Unlock()
 	if domain, ok := c.ip2Domain[ip.String()]; ok {
@@ -83,11 +83,11 @@ func (c *DnsTable) GetByIP(ip net.IP) *DomainRecord {
 	return nil
 }
 
-func (c *DnsTable) Contains(ip net.IP) bool {
+func (c *DNSTable) Contains(ip net.IP) bool {
 	return c.ipPool.Contains(ip)
 }
 
-func (c *DnsTable) Get(domain string) *DomainRecord {
+func (c *DNSTable) Get(domain string) *DomainRecord {
 	c.recordsLock.Lock()
 	defer c.recordsLock.Unlock()
 	return c.get(domain)
@@ -96,12 +96,12 @@ func (c *DnsTable) Get(domain string) *DomainRecord {
 // forge a IPv4 dns reply
 func forgeIPv4Answer(domain string, ip net.IP) *dns.A {
 	rr := new(dns.A)
-	rr.Hdr = dns.RR_Header{Name: dns.Fqdn(domain), Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: configure.DnsDefaultTtl}
+	rr.Hdr = dns.RR_Header{Name: dns.Fqdn(domain), Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: configure.DNSDefaultTTL}
 	rr.A = ip.To4()
 	return rr
 }
 
-func (c *DnsTable) Set(domain string, proxy string) *DomainRecord {
+func (c *DNSTable) Set(domain string, proxy string) *DomainRecord {
 	c.recordsLock.Lock()
 	defer c.recordsLock.Unlock()
 	record := c.records[domain]
@@ -130,20 +130,20 @@ func (c *DnsTable) Set(domain string, proxy string) *DomainRecord {
 	return record
 }
 
-func (c *DnsTable) IsNonProxyDomain(domain string) bool {
+func (c *DNSTable) IsNonProxyDomain(domain string) bool {
 	c.npdLock.Lock()
 	defer c.npdLock.Unlock()
 	_, ok := c.nonProxyDomains[domain]
 	return ok
 }
 
-func (c *DnsTable) SetNonProxyDomain(domain string, ttl uint32) {
+func (c *DNSTable) SetNonProxyDomain(domain string, ttl uint32) {
 	c.npdLock.Lock()
 	defer c.npdLock.Unlock()
 	c.nonProxyDomains[domain] = time.Now().Add(time.Duration(ttl) * time.Second)
 }
 
-func (c *DnsTable) clearExpiredNonProxyDomain(now time.Time) {
+func (c *DNSTable) clearExpiredNonProxyDomain(now time.Time) {
 	c.npdLock.Lock()
 	defer c.npdLock.Unlock()
 	for domain, expired := range c.nonProxyDomains {
@@ -154,7 +154,7 @@ func (c *DnsTable) clearExpiredNonProxyDomain(now time.Time) {
 	}
 }
 
-func (c *DnsTable) clearExpiredDomain(now time.Time) {
+func (c *DNSTable) clearExpiredDomain(now time.Time) {
 	c.recordsLock.Lock()
 	defer c.recordsLock.Unlock()
 
@@ -177,7 +177,7 @@ func (c *DnsTable) clearExpiredDomain(now time.Time) {
 	}
 }
 
-func (c *DnsTable) Serve() error {
+func (c *DNSTable) Serve() error {
 	tick := time.Tick(60 * time.Second)
 	for now := range tick {
 		c.clearExpiredDomain(now)
@@ -186,11 +186,11 @@ func (c *DnsTable) Serve() error {
 	return nil
 }
 
-func (c *DnsTable) Reload(ip net.IP, subnet *net.IPNet) {
+func (c *DNSTable) Reload(ip net.IP, subnet *net.IPNet) {
 	log.Println("Dns table hot reloaded")
 	c.npdLock.Lock()
 	defer c.npdLock.Unlock()
-	for domain, _ := range c.nonProxyDomains {
+	for domain := range c.nonProxyDomains {
 		delete(c.nonProxyDomains, domain)
 	}
 
@@ -203,9 +203,9 @@ func (c *DnsTable) Reload(ip net.IP, subnet *net.IPNet) {
 	}
 }
 
-func NewDnsTable(ip net.IP, subnet *net.IPNet) *DnsTable {
-	c := new(DnsTable)
-	c.ipPool = NewDnsIPPool(ip, subnet)
+func NewDnsTable(ip net.IP, subnet *net.IPNet) *DNSTable {
+	c := new(DNSTable)
+	c.ipPool = NewDNSIPPool(ip, subnet)
 	c.records = make(map[string]*DomainRecord)
 	c.ip2Domain = make(map[string]string)
 	c.nonProxyDomains = make(map[string]time.Time)

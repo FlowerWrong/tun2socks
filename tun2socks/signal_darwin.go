@@ -33,11 +33,11 @@ func (app *App) SignalHandler() *App {
 				if err != nil {
 					log.Fatal("Get default proxy failed", err)
 				}
-				if app.Cfg.Dns.DnsMode == "fake" {
-					app.FakeDns.RulePtr.Reload(app.Cfg.Rule, app.Cfg.Pattern)
+				if app.Cfg.DNS.DNSMode == "fake" {
+					app.FakeDNS.RulePtr.Reload(app.Cfg.Rule, app.Cfg.Pattern)
 
 					var ip, subnet, _ = net.ParseCIDR(app.Cfg.General.Network)
-					app.FakeDns.DnsTablePtr.Reload(ip, subnet)
+					app.FakeDNS.DNSTablePtr.Reload(ip, subnet)
 				}
 				app.Proxies.Reload(app.Cfg.Proxy)
 				log.Println("Routes hot reloaded")

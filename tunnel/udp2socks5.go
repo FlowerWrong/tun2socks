@@ -19,11 +19,11 @@ import (
 	"github.com/yinghuocho/gosocks"
 )
 
-// UdpTunnelList id -> *UdpTunnel
-var UdpTunnelList sync.Map
+// UDPTunnelList id -> *UDPTunnel
+var UDPTunnelList sync.Map
 
-// UdpTunnel timeout read
-type UdpTunnel struct {
+// UDPTunnel timeout read
+type UDPTunnel struct {
 	id                   string
 	localEndpoint        stack.TransportEndpointID
 	remoteHost           string // ip or domain
@@ -49,9 +49,9 @@ func id(remoteHost string, remotePort uint16, localAddr tcpip.FullAddress) strin
 	}, "<->")
 }
 
-// NewUdpTunnel Create a udp tunnel
-func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, app *tun2socks.App) (*UdpTunnel, bool, error) {
-	localTcpSocks5Dialer := &gosocks.SocksDialer{
+// NewUDPTunnel Create a udp tunnel
+func NewUDPTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, app *tun2socks.App) (*UDPTunnel, bool, error) {
+	localTCPSocks5Dialer := &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
 		Timeout: DefaultConnectDuration,
 	}
@@ -60,9 +60,9 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 	remoteHost := endpoint.LocalAddress.To4().String()
 	var hostType byte = gosocks.SocksIPv4Host
 	proxy := ""
-	if app.FakeDns != nil {
+	if app.FakeDNS != nil {
 		ip := net.ParseIP(remoteHost)
-		record := app.FakeDns.DnsTablePtr.GetByIP(ip)
+		record := app.FakeDNS.DNSTablePtr.GetByIP(ip)
 		if record != nil {
 			if record.Proxy == "block" {
 				return nil, false, errors.New(record.Hostname + " is blocked")
@@ -73,17 +73,17 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		}
 	}
 
-	udpId := id(remoteHost, endpoint.LocalPort, localAddr)
-	tunnel, ok := UdpTunnelList.Load(udpId)
+	udpID := id(remoteHost, endpoint.LocalPort, localAddr)
+	tunnel, ok := UDPTunnelList.Load(udpID)
 	if ok && tunnel != nil {
-		return tunnel.(*UdpTunnel), true, nil
+		return tunnel.(*UDPTunnel), true, nil
 	}
 
 	if proxy == "" {
-		proxy, _ = app.Cfg.UdpProxy()
+		proxy, _ = app.Cfg.UDPProxy()
 	}
 
-	socks5TcpConn, err := localTcpSocks5Dialer.Dial(proxy)
+	socks5TcpConn, err := localTCPSocks5Dialer.Dial(proxy)
 	if err != nil {
 		log.Println("Fail to connect SOCKS proxy ", err)
 		return nil, false, err
@@ -132,7 +132,7 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 	// A zero value for t means I/O operations will not time out.
 	socks5TcpConn.SetDeadline(WithoutTimeout)
 
-	udpTunnel := UdpTunnel{
+	udpTunnel := UDPTunnel{
 		id:                   id(remoteHost, endpoint.LocalPort, localAddr),
 		localEndpoint:        endpoint,
 		remoteHost:           remoteHost,
@@ -147,12 +147,13 @@ func NewUdpTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		remoteBufLen:         0,
 	}
 	udpTunnel.ctx, udpTunnel.ctxCancel = context.WithCancel(context.Background())
-	UdpTunnelList.Store(udpTunnel.id, &udpTunnel)
+	UDPTunnelList.Store(udpTunnel.id, &udpTunnel)
 
 	return &udpTunnel, false, nil
 }
 
-func (udpTunnel *UdpTunnel) Run(v buffer.View, existFlag bool) {
+// Run udp tunnel
+func (udpTunnel *UDPTunnel) Run(v buffer.View, existFlag bool) {
 	req := &gosocks.UDPRequest{
 		Frag:     0,
 		HostType: udpTunnel.remoteHostType,
@@ -177,14 +178,14 @@ func (udpTunnel *UdpTunnel) Run(v buffer.View, existFlag bool) {
 
 	if !existFlag {
 		udpTunnel.wg.Add(1)
-		go udpTunnel.ReadFromRemoteWriteToLocal()
+		go udpTunnel.readFromRemoteWriteToLocal()
 
 		udpTunnel.wg.Wait()
 		udpTunnel.Close(errors.New("OK"))
 	}
 }
 
-func (udpTunnel *UdpTunnel) ReadFromRemoteWriteToLocal() {
+func (udpTunnel *UDPTunnel) readFromRemoteWriteToLocal() {
 	defer udpTunnel.wg.Done()
 	var udpSocks5Buf [PktChannelSize]byte
 
@@ -194,7 +195,7 @@ readFromRemote:
 		case <-udpTunnel.ctx.Done():
 			break readFromRemote
 		default:
-			udpTunnel.socks5UdpListen.SetReadDeadline(time.Now().Add(time.Duration(udpTunnel.app.Cfg.Udp.Timeout) * time.Second))
+			udpTunnel.socks5UdpListen.SetReadDeadline(time.Now().Add(time.Duration(udpTunnel.app.Cfg.UDP.Timeout) * time.Second))
 			n, _, err := udpTunnel.socks5UdpListen.ReadFromUDP(udpSocks5Buf[0:])
 			if n > 0 {
 				udpReq, err := gosocks.ParseUDPRequest(udpSocks5Buf[0:n])
@@ -235,9 +236,9 @@ readFromRemote:
 }
 
 // Close this udp tunnel
-func (udpTunnel *UdpTunnel) Close(reason error) {
+func (udpTunnel *UDPTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		UdpTunnelList.Delete(udpTunnel.id)
+		UDPTunnelList.Delete(udpTunnel.id)
 		udpTunnel.ctxCancel()
 		udpTunnel.socks5TcpConn.Close()
 		udpTunnel.socks5UdpListen.Close()

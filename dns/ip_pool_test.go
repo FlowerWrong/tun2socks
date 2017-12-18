@@ -9,7 +9,7 @@ import (
 
 var network = "10.192.0.1/16"
 var ip, subnet, _ = net.ParseCIDR(network)
-var dnsIPPool = NewDnsIPPool(ip, subnet)
+var dnsIPPool = NewDNSIPPool(ip, subnet)
 
 func init() {
 }

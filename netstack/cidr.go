@@ -6,6 +6,7 @@ import (
 	"github.com/yl2chen/cidranger"
 )
 
+// IgnoreRanger is a cidranger
 var IgnoreRanger = cidranger.NewPCTrieRanger()
 
 func init() {
