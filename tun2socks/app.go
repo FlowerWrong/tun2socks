@@ -12,6 +12,7 @@ import (
 	"github.com/FlowerWrong/water"
 )
 
+// App struct
 type App struct {
 	FakeDNS  *dns.DNS
 	Cfg      *configure.AppConfig
@@ -22,11 +23,13 @@ type App struct {
 	WG       sync.WaitGroup
 }
 
+// NewTun create a tun interface
 func (app *App) NewTun() *App {
 	NewTun(app)
 	return app
 }
 
+// AddRoutes add route table
 func (app *App) AddRoutes() *App {
 	name := app.Ifce.Name()
 	for _, val := range app.Cfg.Route.V {
@@ -40,6 +43,7 @@ func (app *App) AddRoutes() *App {
 	return app
 }
 
+// Config parse config from file
 func (app *App) Config(configFile string) *App {
 	// parse config
 	app.Cfg = new(configure.AppConfig)

@@ -3,7 +3,7 @@
 ## How to use it?
 
 ```
-# install golang 1.9+
+# install golang 1.9+, becase of sync.Map
 cp config.example.ini config.ini
 # edit it for free
 sudo go run cmd/main.go --config=config.ini
