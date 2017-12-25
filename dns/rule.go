@@ -17,12 +17,11 @@ func (rule *Rule) DirectDomain(domain string) {
 	pattern.AddDomain(domain)
 }
 
-// match a proxy for target `val`
+// Proxy match a proxy for target `val`
 func (rule *Rule) Proxy(val interface{}) (bool, string) {
 	for _, pattern := range rule.patterns {
 		if pattern.Match(val) {
-			proxy := pattern.Proxy()
-			return true, proxy
+			return true, pattern.Proxy()
 		}
 	}
 	return false, rule.final

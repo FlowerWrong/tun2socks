@@ -148,8 +148,11 @@ func (d *DNS) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 		if proxy != "" {
 			if record := d.DNSTablePtr.Set(domain, proxy); record != nil {
 				// record.SetRealIP(msg)
+				log.Println("[dns] --------------------------", domain, "via proxy", proxy, "is a proxy domain config it????")
 				return record.Answer(r), nil
 			}
+		} else {
+			log.Println("[dns] --------------------------", domain, "is a non-proxy-domain config it????")
 		}
 	}
 
