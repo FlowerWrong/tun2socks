@@ -66,3 +66,23 @@ func (app *App) Config(configFile string) *App {
 
 	return app
 }
+
+// ReloadConfig reload config file
+func (app *App) ReloadConfig() {
+	// parse config
+	file := app.Cfg.File
+	app.Cfg = new(configure.AppConfig)
+	err := app.Cfg.Parse(file)
+	if err != nil {
+		log.Fatal("Get default proxy failed", err)
+	}
+	if app.Cfg.DNS.DNSMode == "fake" {
+		app.FakeDNS.RulePtr.Reload(app.Cfg.Rule, app.Cfg.Pattern)
+
+		var ip, subnet, _ = net.ParseCIDR(app.Cfg.General.Network)
+		app.FakeDNS.DNSTablePtr.Reload(ip, subnet)
+	}
+	app.Proxies.Reload(app.Cfg.Proxy)
+	log.Println("Routes hot reloaded")
+	app.AddRoutes()
+}

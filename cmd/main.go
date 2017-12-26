@@ -9,12 +9,14 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/tun2socks/netstack"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
+	"github.com/fsnotify/fsnotify"
 )
 
 func main() {
@@ -79,6 +81,44 @@ func main() {
 			http.ListenAndServe(pprofAddr, nil)
 			app.WG.Done()
 		}(app)
+	}
+
+	// fsnotify to watch config file
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer watcher.Close()
+	app.WG.Add(1)
+	go func(app *tun2socks.App, configFile string) {
+		defer app.WG.Done()
+		var t *time.Timer
+		for {
+			select {
+			case event := <-watcher.Events:
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					if strings.HasSuffix(configFile, event.Name) {
+						// to avoid double trigger write events
+						if t == nil {
+							log.Println("config file:", event.Name, "modified, now reload")
+							t = time.NewTimer(time.Second * 2)
+							app.ReloadConfig()
+							go func() {
+								<-t.C
+								t = nil
+							}()
+						}
+					}
+				}
+			case watcherErr := <-watcher.Errors:
+				log.Println("error:", watcherErr)
+			}
+		}
+	}(app, configFile)
+
+	err = watcher.Add(configFile)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	app.WG.Wait()

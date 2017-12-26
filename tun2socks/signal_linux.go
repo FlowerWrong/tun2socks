@@ -2,15 +2,14 @@ package tun2socks
 
 import (
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/FlowerWrong/tun2socks/util"
 )
 
+// SignalHandler of linux
 func (app *App) SignalHandler() *App {
 	// signal handler
 	c := make(chan os.Signal)
@@ -26,22 +25,7 @@ func (app *App) SignalHandler() *App {
 				log.Println("Usr1", s)
 			case syscall.SIGUSR2:
 				log.Println("Usr2", s)
-				// parse config
-				file := app.Cfg.File
-				app.Cfg = new(configure.AppConfig)
-				err := app.Cfg.Parse(file)
-				if err != nil {
-					log.Fatal("Get default proxy failed", err)
-				}
-				if app.Cfg.DNS.DNSMode == "fake" {
-					app.FakeDNS.RulePtr.Reload(app.Cfg.Rule, app.Cfg.Pattern)
-
-					var ip, subnet, _ = net.ParseCIDR(app.Cfg.General.Network)
-					app.FakeDNS.DNSTablePtr.Reload(ip, subnet)
-				}
-				app.Proxies.Reload(app.Cfg.Proxy)
-				log.Println("Routes hot reloaded")
-				app.AddRoutes()
+				app.ReloadConfig()
 				break
 			default:
 				log.Println("Other", s)
