@@ -4,6 +4,10 @@
 
 ```
 # install golang 1.9+, becase of sync.Map
+go get -u -v github.com/FlowerWrong/tun2socks
+cd tun2socks
+go get ./...
+
 cp config.example.ini config.ini
 # edit it for free
 sudo go run cmd/main.go --config=config.ini
