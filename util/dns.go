@@ -37,38 +37,28 @@ func CreateDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint1
 	return packetData
 }
 
+// UpdateDNSServers ...
 func UpdateDNSServers(setFlag bool) {
 	var shell string
 	if runtime.GOOS == "darwin" {
 		shell = `
+function scutil_query {
+  key=$1
+  scutil<<EOT
+  open
+  get $key
+  d.show
+  close
+EOT
+}
 function updateDNS {
-  services=$(networksetup -listnetworkserviceorder | grep 'Hardware Port')
-  while read line; do
-      sname=$(echo $line | awk -F  "(, )|(: )|[)]" '{print $2}')
-      sdev=$(echo $line | awk -F  "(, )|(: )|[)]" '{print $4}')
-      # echo "Current service: $sname, $sdev, $currentservice"
-      if [ -n "$sdev" ]; then
-          ifout="$(ifconfig $sdev 2>/dev/null)"
-          echo "$ifout" | grep 'status: active' > /dev/null 2>&1
-          rc="$?"
-          if [ "$rc" -eq 0 ]; then
-              currentservice="$sname"
-              currentdevice="$sdev"
-              currentmac=$(echo "$ifout" | awk '/ether/{print $2}')
-          fi
-      fi
-  done <<< "$(echo "$services")"
-
-  if [ -n "$currentservice" ]; then
-      echo "Current networkservice is $currentservice"
-  else
-      >&2 echo "Could not find current service"
-      exit 1
-  fi
+  SERVICE_GUID=$(scutil_query State:/Network/Global/IPv4 | grep "PrimaryService" | awk '{print $3}')
+  currentservice=$(scutil_query Setup:/Network/Service/$SERVICE_GUID | grep "UserDefinedName" | awk -F': ' '{print $2}')
+  echo "Current active networkservice is $currentservice, $SERVICE_GUID"
 
   olddns=$(networksetup -getdnsservers "$currentservice")
 
-	case "$1" in
+  case "$1" in
     d|default)
       echo "old dns is $olddns, set dns to default"
       networksetup -setdnsservers "$currentservice" empty
