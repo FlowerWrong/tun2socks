@@ -2,6 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"math/rand"
+	"runtime"
+	"time"
 
 	"github.com/getlantern/systray"
 	"github.com/getlantern/systray/example/icon"
@@ -9,11 +13,16 @@ import (
 )
 
 func main() {
-	onExit := func() {
-		fmt.Println("Finished onExit")
-	}
-	// Should be called at the very beginning of main().
+	rand.Seed(time.Now().UnixNano())
+	// log with file and line number
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.Println("Use CPU number", runtime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	systray.Run(onReady, onExit)
+}
+
+func onExit() {
+	fmt.Println("Finished onExit")
 }
 
 func onReady() {
