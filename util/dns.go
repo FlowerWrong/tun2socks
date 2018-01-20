@@ -122,6 +122,7 @@ function flushCache {
 		}
 		if err := ExecCommand("netsh", sargs); err != nil {
 			log.Println("execCommand failed", err)
+			log.Println("NOTE: please setup your network interface (eg Ethernet) dns server to 127.0.0.1 by hand.")
 		}
 		return
 	} else {
