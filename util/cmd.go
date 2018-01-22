@@ -27,7 +27,7 @@ func ExecCommandWithOutput(name, sargs string) ([]byte, error) {
 
 // ExecShell ...
 func ExecShell(s string) {
-	cmd := exec.Command("sh", "-c", s)
+	cmd := exec.Command("bash", "-c", s)
 	var out bytes.Buffer
 
 	cmd.Stdout = &out
