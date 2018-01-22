@@ -168,8 +168,6 @@ function updateDNS {
 }
 
 function flushCache {
-  nscd -K
-  nscd
 }
 `
 	} else if runtime.GOOS == "windows" {
