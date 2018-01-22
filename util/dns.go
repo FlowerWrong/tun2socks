@@ -114,6 +114,7 @@ function flushCache {
 `
 	} else if runtime.GOOS == "windows" {
 		// FIXME How to get current active network interface in windows?
+		// https://stackoverflow.com/questions/29523583/how-to-retrieve-ethernet-adapter-name-in-windows-8-1-batch-script
 		var sargs string
 		if setFlag {
 			sargs = fmt.Sprintf("interface ipv4 add dnsserver \"以太网\" 127.0.0.1 index=1")
