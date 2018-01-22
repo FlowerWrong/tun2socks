@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/FlowerWrong/tun2socks/util"
 )
 
 func (app *App) SignalHandler() *App {
@@ -19,7 +17,7 @@ func (app *App) SignalHandler() *App {
 			switch s {
 			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
 				log.Println("Exit", s)
-				util.Exit()
+				app.Exit()
 			default:
 				log.Println("Other", s)
 			}

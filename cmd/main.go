@@ -15,7 +15,6 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/tun2socks/netstack"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
-	"github.com/FlowerWrong/tun2socks/util"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -60,7 +59,7 @@ func main() {
 	if app.Cfg.DNS.DNSMode == "fake" {
 		app.WG.Add(1)
 		go func(app *tun2socks.App) {
-			util.UpdateDNSServers(true)
+			app.UpdateDNSServers(true)
 			app.FakeDNS.Serve()
 			app.WG.Done()
 		}(app)

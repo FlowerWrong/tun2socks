@@ -1,8 +1,12 @@
 package tun2socks
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net"
+	"os"
+	"runtime"
 	"sync"
 
 	"github.com/FlowerWrong/netstack/tcpip/stack"
@@ -85,4 +89,138 @@ func (app *App) ReloadConfig() {
 	app.Proxies.Reload(app.Cfg.Proxy)
 	log.Println("Routes hot reloaded")
 	app.AddRoutes()
+}
+
+// Exit tun2socks
+func (app *App) Exit() {
+	app.UpdateDNSServers(false)
+	os.Exit(0)
+}
+
+// UpdateDNSServers ...
+func (app *App) UpdateDNSServers(setFlag bool) {
+	var shell string
+	if runtime.GOOS == "darwin" {
+		shell = `
+function scutil_query {
+  key=$1
+  scutil<<EOT
+  open
+  get $key
+  d.show
+  close
+EOT
+}
+function updateDNS {
+  SERVICE_GUID=$(scutil_query State:/Network/Global/IPv4 | grep "PrimaryService" | awk '{print $3}')
+  currentservice=$(scutil_query Setup:/Network/Service/$SERVICE_GUID | grep "UserDefinedName" | awk -F': ' '{print $2}')
+  echo "Current active networkservice is $currentservice, $SERVICE_GUID"
+
+  olddns=$(networksetup -getdnsservers "$currentservice")
+
+  case "$1" in
+    d|default)
+      echo "old dns is $olddns, set dns to default"
+      networksetup -setdnsservers "$currentservice" empty
+      ;;
+    g|google)
+      echo "old dns is $olddns, set dns to google dns"
+      networksetup -setdnsservers "$currentservice" 8.8.8.8 4.4.4.4
+      ;;
+    a|ali)
+      echo "old dns is $olddns, set dns to alidns"
+      networksetup -setdnsservers "$currentservice" "223.5.5.5"
+      ;;
+    l|local)
+      echo "old dns is $olddns, set dns to 127.0.0.1"
+      networksetup -setdnsservers "$currentservice" "127.0.0.1"
+      ;;
+    *)
+      echo "You have failed to specify what to do correctly."
+      exit 1
+      ;;
+  esac
+}
+
+function flushCache {
+  sudo dscacheutil -flushcache
+  sudo killall -HUP mDNSResponder
+}
+`
+	} else if runtime.GOOS == "linux" || runtime.GOOS == "freebsd" {
+		shell = `
+function updateDNS {
+  case "$1" in
+    g|google)
+      echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+      ;;
+    a|ali)
+      echo "nameserver 223.5.5.5" | sudo tee /etc/resolv.conf
+      ;;
+    l|local)
+      echo "nameserver 127.0.0.1" | sudo tee /etc/resolv.conf
+      ;;
+    *)
+      echo "You have failed to specify what to do correctly."
+      exit 1
+      ;;
+  esac
+}
+
+function flushCache {
+  nscd -K
+  nscd
+}
+`
+	} else if runtime.GOOS == "windows" {
+		name, err := app.ActiveInterfaceName()
+		if err != nil {
+			log.Println("execCommand failed", err)
+			log.Println("NOTE: please setup your network interface (eg Ethernet) dns server to 127.0.0.1 by hand.")
+		}
+
+		var sargs string
+		if setFlag {
+			sargs = fmt.Sprintf("interface ip set dns name=\"%s\" source=static addr=127.0.0.1 register=primary", name)
+		} else {
+			sargs = fmt.Sprintf("interface ip set dns name=\"%s\" source=dhcp", name)
+		}
+		err = util.ExecCommand("netsh", sargs)
+		if err != nil {
+			log.Println("execCommand failed", err)
+			log.Println("NOTE: please setup your network interface (eg Ethernet) dns server to 127.0.0.1 by hand.")
+		}
+		return
+	} else {
+		log.Println("Without support for", runtime.GOOS)
+		return
+	}
+	if setFlag {
+		shell += `
+updateDNS l
+`
+	} else {
+		shell += `
+updateDNS a
+flushCache
+`
+	}
+	util.ExecShell(shell)
+}
+
+// ActiveInterfaceName get windows current active interface name
+func (app *App) ActiveInterfaceName() (string, error) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+	for _, intf := range interfaces {
+		log.Println(intf)
+	}
+	for _, intf := range interfaces {
+		if intf.Flags&(1<<0) != 0 && intf.Flags&(1<<2) == 0 && intf.Flags&(1<<3) == 0 && app.Ifce.Name() != intf.Name {
+			return intf.Name, nil
+		}
+	}
+	return "", errors.New("not found")
 }

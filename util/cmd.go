@@ -3,11 +3,11 @@ package util
 import (
 	"bytes"
 	"log"
-	"os"
 	"os/exec"
 	"strings"
 )
 
+// ExecCommand ...
 func ExecCommand(name, sargs string) error {
 	args := strings.Split(sargs, " ")
 	cmd := exec.Command(name, args...)
@@ -15,6 +15,17 @@ func ExecCommand(name, sargs string) error {
 	return cmd.Run()
 }
 
+// ExecCommandWithOutput ...
+func ExecCommandWithOutput(name, sargs string) ([]byte, error) {
+	args := strings.Split(sargs, " ")
+	out, err := exec.Command(name, args...).Output()
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ExecShell ...
 func ExecShell(s string) {
 	cmd := exec.Command("sh", "-c", s)
 	var out bytes.Buffer
@@ -25,10 +36,4 @@ func ExecShell(s string) {
 		log.Println("Run shell command failed", err)
 	}
 	log.Println(out.String())
-}
-
-// Exit tun2socks
-func Exit() {
-	UpdateDNSServers(false)
-	os.Exit(0)
 }
