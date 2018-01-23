@@ -21,7 +21,6 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 		log.Fatal("New UDP Endpoint failed", e)
 	}
 	defer ep.Close()
-	defer app.WG.Done()
 	if err := ep.Bind(tcpip.FullAddress{NICId, "", app.HookPort}, nil); err != nil {
 		log.Fatal("Bind failed", err)
 	}

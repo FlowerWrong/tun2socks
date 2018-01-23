@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"sync"
 
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/tun2socks/configure"
@@ -24,7 +23,6 @@ type App struct {
 	S        *stack.Stack
 	Ifce     *water.Interface
 	HookPort uint16
-	WG       sync.WaitGroup
 }
 
 // NewTun create a tun interface

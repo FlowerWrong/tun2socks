@@ -14,6 +14,7 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/tun2socks/netstack"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
+	"github.com/FlowerWrong/tun2socks/util"
 )
 
 func main() {
@@ -44,41 +45,37 @@ func main() {
 	var proto tcpip.NetworkProtocolNumber
 	proto = netstack.NewNetstack(app)
 
-	app.WG.Add(1)
-	go netstack.NewTCPEndpointAndListenIt(proto, app)
+	wgw := new(util.WaitGroupWrapper)
+	wgw.Wrap(func() {
+		netstack.NewTCPEndpointAndListenIt(proto, app)
+	})
 	if app.Cfg.UDP.Enabled {
-		app.WG.Add(1)
 		_, err := app.Cfg.UDPProxy()
 		if err != nil {
 			log.Fatal("Get udp socks 5 proxy failed", err)
 		}
-		go netstack.NewUDPEndpointAndListenIt(proto, app)
+		wgw.Wrap(func() {
+			netstack.NewUDPEndpointAndListenIt(proto, app)
+		})
 	}
 	if app.Cfg.DNS.DNSMode == "fake" {
-		app.WG.Add(1)
-		go func(app *tun2socks.App) {
+		wgw.Wrap(func() {
 			app.UpdateDNSServers(true)
 			app.FakeDNS.Serve()
-			app.WG.Done()
-		}(app)
-
-		app.WG.Add(1)
-		go func(app *tun2socks.App) {
+		})
+		wgw.Wrap(func() {
 			// clearExpiredNonProxyDomain and clearExpiredDomain
 			app.FakeDNS.DNSTablePtr.Serve()
-			app.WG.Done()
-		}(app)
+		})
 	}
 
 	if app.Cfg.Pprof.Enabled {
-		app.WG.Add(1)
-		go func(app *tun2socks.App) {
+		wgw.Wrap(func() {
 			pprofAddr := fmt.Sprintf("%s:%d", app.Cfg.Pprof.ProfHost, app.Cfg.Pprof.ProfPort)
 			log.Println("Http pprof listen on", pprofAddr, " see", fmt.Sprintf("http://%s/debug/pprof/", pprofAddr))
 			http.ListenAndServe(pprofAddr, nil)
-			app.WG.Done()
-		}(app)
+		})
 	}
 
-	app.WG.Wait()
+	wgw.WaitGroup.Wait()
 }
