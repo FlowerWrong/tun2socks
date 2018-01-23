@@ -168,6 +168,7 @@ function updateDNS {
 }
 
 function flushCache {
+	echo "You need to flush cache yourself!!!"
 }
 `
 	} else if runtime.GOOS == "windows" {
