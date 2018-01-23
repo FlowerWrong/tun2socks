@@ -1,20 +1,23 @@
 package main
 
 import (
-	"flag"
+	"C"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
-	"runtime"
-	"time"
 
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/tun2socks/netstack"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
+)
+import (
+	"flag"
+	"math/rand"
+	"os"
+	"runtime"
+	"time"
 )
 
 func main() {
@@ -38,7 +41,11 @@ func main() {
 		}
 	}
 	log.Println("config file is", configFile)
+	RunTun2socks(configFile)
+}
 
+//export RunTun2socks
+func RunTun2socks(configFile string) {
 	app := new(tun2socks.App)
 	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
 
