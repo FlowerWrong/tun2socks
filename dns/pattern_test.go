@@ -32,6 +32,7 @@ func TestDomainSuffixPattern(t *testing.T) {
 		"1example.com":    false,
 		"example.hk":      true,
 		"example.1hk":     false,
+		"a.b.example.com": true,
 	}
 	checkCases(t, proxy, pattern, cases)
 }
