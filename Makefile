@@ -10,3 +10,9 @@ release:
 	GOOS=darwin go build -o tun2socks_darwin cmd/main.go
 	GOOS=windows GOARCH=amd64 go build -o tun2socks_windows_64.exe cmd/main.go
 	GOOS=windows GOARCH=386 go build -o tun2socks_windows_32.exe cmd/main.go
+
+shared:
+  go build -buildmode=c-shared -o tun2socks.so ./cmd/shared
+
+static:
+  go build -buildmode=c-archive -o tun2socks.a ./cmd/shared
