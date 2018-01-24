@@ -109,6 +109,8 @@ function scutil_query {
   close
 EOT
 }
+`
+		shell += `
 function updateDNS {
   SERVICE_GUID=$(scutil_query State:/Network/Global/IPv4 | grep "PrimaryService" | awk '{print $3}')
   currentservice=$(scutil_query Setup:/Network/Service/$SERVICE_GUID | grep "UserDefinedName" | awk -F': ' '{print $2}')
@@ -145,7 +147,7 @@ function flushCache {
   sudo killall -HUP mDNSResponder
 }
 `
-	} else if runtime.GOOS == "linux" || runtime.GOOS == "freebsd" {
+	} else if runtime.GOOS == "linux" {
 		shell = `
 function updateDNS {
   case "$1" in
@@ -170,10 +172,16 @@ function flushCache {
 }
 `
 	} else if runtime.GOOS == "windows" {
-		name, err := app.ActiveInterfaceName()
-		if err != nil {
-			log.Println("execCommand failed", err)
-			log.Println("NOTE: please setup your network interface (eg Ethernet) dns server to 127.0.0.1 by hand.")
+		var name string
+		var err error
+		if app.Cfg.General.Interface == "" {
+			name, err = app.ActiveInterfaceName()
+			if err != nil {
+				log.Println("execCommand failed", err)
+				log.Println("NOTE: please setup your network interface (eg Ethernet) dns server to 127.0.0.1 by hand.")
+			}
+		} else {
+			name = app.Cfg.General.Interface
 		}
 
 		var sargs string

@@ -19,8 +19,9 @@ const (
 
 // GeneralConfig ini
 type GeneralConfig struct {
-	Network string // tun network
-	Mtu     uint32
+	Network   string // tun network
+	Mtu       uint32
+	Interface string
 }
 
 // PprofConfig ini
@@ -32,13 +33,14 @@ type PprofConfig struct {
 
 // DNSConfig ini
 type DNSConfig struct {
-	DNSMode         string   `gcfg:"dns-mode"`
-	DNSPort         uint16   `gcfg:"dns-port"`
-	DNSTtl          uint     `gcfg:"dns-ttl"`
-	DNSPacketSize   uint16   `gcfg:"dns-packet-size"`
-	DNSReadTimeout  uint     `gcfg:"dns-read-timeout"`
-	DNSWriteTimeout uint     `gcfg:"dns-write-timeout"`
-	Nameserver      []string // backend dns
+	DNSMode          string   `gcfg:"dns-mode"`
+	DNSPort          uint16   `gcfg:"dns-port"`
+	DNSTtl           uint     `gcfg:"dns-ttl"`
+	DNSPacketSize    uint16   `gcfg:"dns-packet-size"`
+	DNSReadTimeout   uint     `gcfg:"dns-read-timeout"`
+	DNSWriteTimeout  uint     `gcfg:"dns-write-timeout"`
+	Nameserver       []string // backend dns
+	OriginNameserver string
 }
 
 type RouteConfig struct {
@@ -89,8 +91,9 @@ func (cfg *AppConfig) Parse(filename string) error {
 	// set default value
 	cfg.General.Network = "198.18.0.0/15"
 	cfg.General.Mtu = 1500
+	cfg.General.Interface = ""
 
-	cfg.Pprof.Enabled = true
+	cfg.Pprof.Enabled = false
 	cfg.Pprof.ProfHost = "127.0.0.1"
 	cfg.Pprof.ProfPort = 6060
 
@@ -100,6 +103,7 @@ func (cfg *AppConfig) Parse(filename string) error {
 	cfg.DNS.DNSPacketSize = DNSDefaultPacketSize
 	cfg.DNS.DNSReadTimeout = DNSDefaultReadTimeout
 	cfg.DNS.DNSWriteTimeout = DNSDefaultWriteTimeout
+	cfg.DNS.OriginNameserver = "" // TODO
 
 	cfg.UDP.Enabled = true
 	cfg.UDP.Timeout = 300
