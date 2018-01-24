@@ -39,7 +39,7 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 				continue
 			}
 			if !util.IsClosed(err) {
-				log.Println("Read from netstack failed", err)
+				log.Println("[error] read from netstack failed", err)
 			}
 			udp.UDPNatList.Delete(localAddr.Port)
 			continue
@@ -60,7 +60,7 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 
 		udpTunnel, existFlag, e := tunnel.NewUDPTunnel(endpoint, localAddr, app)
 		if e != nil {
-			log.Println("NewUDPTunnel failed", e)
+			log.Println("[error] NewUDPTunnel failed", e)
 			udp.UDPNatList.Delete(localAddr.Port)
 			continue
 		}

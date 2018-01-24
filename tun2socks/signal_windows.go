@@ -16,10 +16,10 @@ func (app *App) SignalHandler() *App {
 		for s := range c {
 			switch s {
 			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-				log.Println("Exit", s)
+				log.Println("[signal]", s)
 				app.Exit()
 			default:
-				log.Println("Other", s)
+				log.Println("[signal]", s)
 			}
 		}
 	}(app)

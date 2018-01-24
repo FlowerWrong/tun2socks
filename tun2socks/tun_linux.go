@@ -26,6 +26,6 @@ func NewTun(app *App) {
 	if err != nil {
 		log.Fatal("Create tun interface failed", err)
 	}
-	log.Println("Interface Name:", app.Ifce.Name())
+	log.Println("[tun] interface name is", app.Ifce.Name())
 	Ifconfig(app.Ifce.Name(), app.Cfg.General.Network, app.Cfg.General.Mtu)
 }

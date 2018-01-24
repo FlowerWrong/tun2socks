@@ -11,7 +11,7 @@ import (
 func ExecCommand(name, sargs string) error {
 	args := strings.Split(sargs, " ")
 	cmd := exec.Command(name, args...)
-	log.Printf("exec command: %s %s", name, sargs)
+	log.Printf("[command] %s %s", name, sargs)
 	return cmd.Run()
 }
 
@@ -33,7 +33,7 @@ func ExecShell(s string) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		log.Println("Run shell command failed", err)
+		log.Println("[shell] run shell command failed", err)
 	}
-	log.Println(out.String())
+	log.Println("[shell]", out.String())
 }

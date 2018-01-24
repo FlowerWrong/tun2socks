@@ -19,9 +19,7 @@ import (
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	// log with file and line number
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Println("Use CPU number", runtime.NumCPU())
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	config := flag.String("config", "", "config file")
@@ -37,7 +35,7 @@ func main() {
 			}
 		}
 	}
-	log.Println("config file is", configFile)
+	log.Println("[app] config file path is", configFile)
 	RunTun2socks(configFile)
 }
 
@@ -76,10 +74,11 @@ func RunTun2socks(configFile string) {
 	if app.Cfg.Pprof.Enabled {
 		wgw.Wrap(func() {
 			pprofAddr := fmt.Sprintf("%s:%d", app.Cfg.Pprof.ProfHost, app.Cfg.Pprof.ProfPort)
-			log.Println("Http pprof listen on", pprofAddr, " see", fmt.Sprintf("http://%s/debug/pprof/", pprofAddr))
+			log.Println("[pprof] Http pprof listen on", pprofAddr, " see", fmt.Sprintf("http://%s/debug/pprof/", pprofAddr))
 			http.ListenAndServe(pprofAddr, nil)
 		})
 	}
 
+	log.Println(fmt.Sprintf("[app] run tun2socks(%.2f) success", app.Version))
 	wgw.WaitGroup.Wait()
 }

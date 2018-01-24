@@ -23,6 +23,7 @@ type App struct {
 	S        *stack.Stack
 	Ifce     *water.Interface
 	HookPort uint16
+	Version  float64
 }
 
 // NewTun create a tun interface
@@ -47,6 +48,7 @@ func (app *App) AddRoutes() *App {
 
 // Config parse config from file
 func (app *App) Config(configFile string) *App {
+	app.Version = 0.5
 	// parse config
 	app.Cfg = new(configure.AppConfig)
 	err := app.Cfg.Parse(configFile)

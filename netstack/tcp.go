@@ -39,7 +39,7 @@ func NewTCPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 				<-notifyCh
 				continue
 			}
-			log.Println("Accept failed", err)
+			log.Println("[error] accept failed", err)
 		}
 
 		local, _ := endpoint.GetLocalAddress()
@@ -53,7 +53,6 @@ func NewTCPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 		}
 		tcpTunnel, e := tunnel.NewTCP2Socks(wq, endpoint, ip, local.Port, app)
 		if e != nil {
-			log.Println("NewTCP2Socks tunnel failed", e, tcpTunnel)
 			endpoint.Close()
 			continue
 		}
