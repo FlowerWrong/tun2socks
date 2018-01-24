@@ -12,7 +12,7 @@ release:
 	GOOS=windows GOARCH=386 go build -o tun2socks_windows_32.exe cmd/main.go
 
 shared:
-	go build -buildmode=c-shared -o libtun2socks.so ./cmd
+	go build -buildmode=c-shared -o libtun2socks.so ./cmd/main.go
 
 static:
-	go build -buildmode=c-archive -o libtun2socks.a ./cmd
+	go build -buildmode=c-archive -o libtun2socks.a ./cmd/main.go
