@@ -3,9 +3,9 @@
 #include <string.h>
 #include "libtun2socks.h"
 
-// osx:   gcc -o tun2socks main.c libtun2socks.a -framework CoreFoundation -framework Security -lpthread
-// linux: gcc -o tun2socks main.c libtun2socks.a -pthread
-// linux: gcc -o tun2socks main.c ./libtun2socks.so
+// osx:     gcc -o tun2socks main.c libtun2socks.a -framework CoreFoundation -framework Security -lpthread
+// linux:   gcc -o tun2socks main.c libtun2socks.a -pthread
+// windows: gcc -o tun2socks main.c libtun2socks.lib -l winmm -l ntdll -l Ws2_32
 int main(int argc, char *argv[]) {
   if (argc != 2) {
     printf("Usage: sudo ./tun2socks config.ini\n");

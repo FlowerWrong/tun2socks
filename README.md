@@ -31,9 +31,14 @@ sudo kill -s USR2 $PID
 
 NOTE: `go run` not support kill command signal.
 
+## As a static library
+
+See [demo](https://github.com/FlowerWrong/tun2socks/blob/master/cmd/shared/main.c).
+
+Windows build need to install [git](https://git-scm.com/download) + [tdm-gcc](http://tdm-gcc.tdragon.net/download).
+
 ## TODO
 
-* [ ] export as a library `.so .dll .dylib .a .lib`
 * [ ] gui
 * [ ] ipv6 support
 
