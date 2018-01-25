@@ -85,7 +85,7 @@ func NewUDPTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 
 	socks5TcpConn, err := localTCPSocks5Dialer.Dial(proxy)
 	if err != nil {
-		log.Println("Fail to connect SOCKS proxy ", err)
+		log.Println("[error] Fail to connect SOCKS proxy ", err)
 		return nil, false, err
 	}
 
@@ -96,7 +96,7 @@ func NewUDPTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 		Zone: udpSocks5Addr.Zone,
 	})
 	if err != nil {
-		log.Println("ListenUDP falied", err)
+		log.Println("[error] ListenUDP falied", err)
 		socks5TcpConn.Close()
 		return nil, false, err
 	}
@@ -110,7 +110,7 @@ func NewUDPTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 	})
 	if err != nil {
 		// FIXME i/o timeout
-		log.Println("WriteSocksRequest failed", err)
+		log.Println("[error] WriteSocksRequest failed", err)
 		socks5TcpConn.Close()
 		udpSocks5Listen.Close()
 		return nil, false, err
@@ -118,13 +118,13 @@ func NewUDPTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 
 	cmdUDPAssociateReply, err := gosocks.ReadSocksReply(socks5TcpConn)
 	if err != nil {
-		log.Println("ReadSocksReply failed", err)
+		log.Println("[error] ReadSocksReply failed", err)
 		socks5TcpConn.Close()
 		udpSocks5Listen.Close()
 		return nil, false, err
 	}
 	if cmdUDPAssociateReply.Rep != gosocks.SocksSucceeded {
-		log.Printf("socks connect request fail, retcode: %d", cmdUDPAssociateReply.Rep)
+		log.Printf("[error] socks connect request fail, retcode: %d", cmdUDPAssociateReply.Rep)
 		socks5TcpConn.Close()
 		udpSocks5Listen.Close()
 		return nil, false, err
@@ -165,14 +165,14 @@ func (udpTunnel *UDPTunnel) Run(v buffer.View, existFlag bool) {
 	n, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
 	if err != nil {
 		if !util.IsEOF(err) {
-			log.Println("WriteTo UDP tunnel failed", err)
+			log.Println("[error] write to UDP tunnel failed", err)
 			udpTunnel.Close(err)
 		}
 	}
 	dataLen := len(v)
 	udpTunnel.localBufLen += dataLen
 	if n <= len(v) {
-		log.Println("Only part pkt had been write to socks5", n, dataLen)
+		log.Println("[error] only part pkt had been write to socks5", n, dataLen)
 		udpTunnel.Close(errors.New("write part error"))
 	}
 
@@ -200,7 +200,7 @@ readFromRemote:
 			if n > 0 {
 				udpReq, err := gosocks.ParseUDPRequest(udpSocks5Buf[0:n])
 				if err != nil {
-					log.Println("Parse UDP reply data frailed", err)
+					log.Println("[error] parse UDP reply data frailed", err)
 					udpTunnel.Close(err)
 					break readFromRemote
 				}
@@ -213,12 +213,12 @@ readFromRemote:
 				} else {
 					n, err := udpTunnel.app.Ifce.Write(pkt)
 					if err != nil {
-						log.Println("Write udp package to tun failed", err)
+						log.Println("[error] write udp package to tun failed", err)
 						udpTunnel.Close(err)
 						break readFromRemote
 					}
 					if n < len(pkt) {
-						log.Println("Write udp package to tun failed", n, "<", len(pkt))
+						log.Println("[error] write udp package to tun failed", n, "<", len(pkt))
 						udpTunnel.Close(errors.New("write udp package to tun failed, just write success part of pkt"))
 						break readFromRemote
 					}
@@ -226,7 +226,7 @@ readFromRemote:
 			}
 			if err != nil {
 				if !util.IsEOF(err) {
-					log.Println("ReadFromUDP tunnel failed", err, udpTunnel.id)
+					log.Println("[error] ReadFromUDP tunnel failed", err, udpTunnel.id)
 				}
 				udpTunnel.Close(err)
 				break readFromRemote

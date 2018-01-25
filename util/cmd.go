@@ -35,5 +35,5 @@ func ExecShell(s string) {
 	if err != nil {
 		log.Println("[shell] run shell command failed", err)
 	}
-	log.Println("[shell]", out.String())
+	log.Print("[shell] output ", out.String())
 }

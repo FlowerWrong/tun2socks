@@ -1,6 +1,6 @@
 # README
 
-## How to use it?
+## How to use it? [more](https://github.com/FlowerWrong/tun2socks/wiki)
 
 ```
 # install golang 1.9+, becase of sync.Map
@@ -33,7 +33,7 @@ NOTE: `go run` not support kill command signal.
 
 ## As a static library
 
-See [demo](https://github.com/FlowerWrong/tun2socks/blob/master/cmd/shared/main.c).
+See [c api wiki](https://github.com/FlowerWrong/tun2socks/wiki/c-api).
 
 Windows build need to install [git](https://git-scm.com/download) + [tdm-gcc](http://tdm-gcc.tdragon.net/download).
 
