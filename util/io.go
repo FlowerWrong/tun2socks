@@ -3,6 +3,7 @@ package util
 import (
 	"io"
 	"net"
+	"syscall"
 
 	"github.com/FlowerWrong/netstack/tcpip"
 )
@@ -36,6 +37,14 @@ func IsClosed(err *tcpip.Error) bool {
 // IsTimeout check this is timeout or not
 func IsTimeout(err error) bool {
 	if err, ok := err.(net.Error); ok && err.Timeout() {
+		return true
+	}
+	return false
+}
+
+// IsBrokenPipe check this is broken pipe or not
+func IsBrokenPipe(err error) bool {
+	if err == syscall.EPIPE {
 		return true
 	}
 	return false

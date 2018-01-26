@@ -156,8 +156,9 @@ readFromLocal:
 					n, err := tcpTunnel.remoteConn.Write(v)
 					if err != nil {
 						if !util.IsEOF(err) {
-							// FIXME write: broken pipe. because of remote timeout and closed. always 46 bytes, start with "23 3 3 0 41 0 0 0 0 0 0 0", what?
-							log.Println("[error] write packet to remote failed", err, tcpTunnel.remoteAddr)
+							if !util.IsBrokenPipe(err) {
+								log.Println("[error] write packet to remote failed", err, tcpTunnel.remoteAddr)
+							}
 							tcpTunnel.Close(err)
 						}
 						break readFromLocal
