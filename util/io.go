@@ -36,7 +36,7 @@ func IsClosed(err *tcpip.Error) bool {
 
 // IsTimeout check this is timeout or not
 func IsTimeout(err error) bool {
-	if err, ok := err.(net.Error); ok && err.Timeout() {
+	if e, ok := err.(net.Error); ok && e.Timeout() {
 		return true
 	}
 	return false
@@ -44,7 +44,7 @@ func IsTimeout(err error) bool {
 
 // IsBrokenPipe check this is broken pipe or not
 func IsBrokenPipe(err error) bool {
-	if err == syscall.EPIPE {
+	if e, ok := err.(syscall.Errno); ok && e == syscall.EPIPE {
 		return true
 	}
 	return false
