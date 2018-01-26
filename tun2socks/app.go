@@ -93,12 +93,14 @@ func (app *App) ReloadConfig() {
 
 // Exit tun2socks
 func (app *App) Exit() {
-	app.UpdateDNSServers(false)
+	if app.Cfg.DNS.AutoConfigSystemDNS {
+		app.SetAndResetSystemDNSServers(false)
+	}
 	os.Exit(0)
 }
 
-// UpdateDNSServers ...
-func (app *App) UpdateDNSServers(setFlag bool) {
+// SetAndResetSystemDNSServers ...
+func (app *App) SetAndResetSystemDNSServers(setFlag bool) {
 	var shell string
 	if runtime.GOOS == "darwin" {
 		shell = `

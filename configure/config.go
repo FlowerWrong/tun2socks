@@ -33,14 +33,15 @@ type PprofConfig struct {
 
 // DNSConfig ini
 type DNSConfig struct {
-	DNSMode          string   `gcfg:"dns-mode"`
-	DNSPort          uint16   `gcfg:"dns-port"`
-	DNSTtl           uint     `gcfg:"dns-ttl"`
-	DNSPacketSize    uint16   `gcfg:"dns-packet-size"`
-	DNSReadTimeout   uint     `gcfg:"dns-read-timeout"`
-	DNSWriteTimeout  uint     `gcfg:"dns-write-timeout"`
-	Nameserver       []string // backend dns
-	OriginNameserver string
+	DNSMode             string   `gcfg:"dns-mode"`
+	DNSPort             uint16   `gcfg:"dns-port"`
+	DNSTtl              uint     `gcfg:"dns-ttl"`
+	DNSPacketSize       uint16   `gcfg:"dns-packet-size"`
+	DNSReadTimeout      uint     `gcfg:"dns-read-timeout"`
+	DNSWriteTimeout     uint     `gcfg:"dns-write-timeout"`
+	AutoConfigSystemDNS bool     `gcfg:"uto-config-system-dns"`
+	Nameserver          []string // backend dns
+	OriginNameserver    string
 }
 
 type RouteConfig struct {
@@ -104,6 +105,7 @@ func (cfg *AppConfig) Parse(filename string) error {
 	cfg.DNS.DNSReadTimeout = DNSDefaultReadTimeout
 	cfg.DNS.DNSWriteTimeout = DNSDefaultWriteTimeout
 	cfg.DNS.OriginNameserver = "" // TODO
+	cfg.DNS.AutoConfigSystemDNS = true
 
 	cfg.UDP.Enabled = true
 	cfg.UDP.Timeout = 300

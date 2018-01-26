@@ -62,7 +62,9 @@ func RunTun2socks(configFile string) {
 	}
 	if app.Cfg.DNS.DNSMode == "fake" {
 		wgw.Wrap(func() {
-			app.UpdateDNSServers(true)
+			if app.Cfg.DNS.AutoConfigSystemDNS {
+				app.SetAndResetSystemDNSServers(true)
+			}
 			app.FakeDNS.Serve()
 		})
 		wgw.Wrap(func() {
