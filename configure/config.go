@@ -112,7 +112,7 @@ func (cfg *AppConfig) Parse(filename string) error {
 	cfg.DNS.OriginNameserver = "" // TODO
 	cfg.DNS.AutoConfigSystemDNS = true
 
-	cfg.TCP.Timeout = 300
+	cfg.TCP.Timeout = 60
 
 	cfg.UDP.Enabled = true
 	cfg.UDP.Timeout = 300

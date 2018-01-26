@@ -187,7 +187,9 @@ readFromRemote:
 			n, err := tcpTunnel.remoteConn.Read(buf)
 			if err != nil {
 				if !util.IsEOF(err) {
-					log.Println("[error] read from remote failed", err, tcpTunnel.remoteAddr)
+					if !util.IsTimeout(err) {
+						log.Println("[error] read from remote failed", err, tcpTunnel.remoteAddr)
+					}
 					tcpTunnel.Close(err)
 				}
 				break readFromRemote

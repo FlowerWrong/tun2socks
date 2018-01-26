@@ -225,7 +225,7 @@ readFromRemote:
 				}
 			}
 			if err != nil {
-				if !util.IsEOF(err) {
+				if !util.IsEOF(err) && !util.IsTimeout(err) {
 					log.Println("[error] ReadFromUDP tunnel failed", err, udpTunnel.id)
 				}
 				udpTunnel.Close(err)

@@ -32,3 +32,11 @@ func IsClosed(err *tcpip.Error) bool {
 	}
 	return false
 }
+
+// IsTimeout check this is timeout or not
+func IsTimeout(err error) bool {
+	if err, ok := err.(net.Error); ok && err.Timeout() {
+		return true
+	}
+	return false
+}
