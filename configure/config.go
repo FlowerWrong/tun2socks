@@ -70,11 +70,16 @@ type UDPConfig struct {
 	Timeout int
 }
 
+type TCPConfig struct {
+	Timeout int
+}
+
 type AppConfig struct {
 	General GeneralConfig
 	Pprof   PprofConfig
 	DNS     DNSConfig
 	UDP     UDPConfig
+	TCP     TCPConfig
 	Route   RouteConfig
 	Proxy   map[string]*ProxyConfig
 	Pattern map[string]*PatternConfig
@@ -106,6 +111,8 @@ func (cfg *AppConfig) Parse(filename string) error {
 	cfg.DNS.DNSWriteTimeout = DNSDefaultWriteTimeout
 	cfg.DNS.OriginNameserver = "" // TODO
 	cfg.DNS.AutoConfigSystemDNS = true
+
+	cfg.TCP.Timeout = 300
 
 	cfg.UDP.Enabled = true
 	cfg.UDP.Timeout = 300

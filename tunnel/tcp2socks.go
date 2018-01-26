@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/waiter"
@@ -27,7 +28,7 @@ type TCPTunnel struct {
 	ctx                  context.Context
 	ctxCancel            context.CancelFunc
 	closeOne             sync.Once // to avoid multi close tunnel
-	wg                   sync.WaitGroup
+	app                  *tun2socks.App
 }
 
 // NewTCP2Socks create a tcp tunnel
@@ -66,6 +67,7 @@ func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, a
 		remoteAddr:           remoteAddr,
 		localEndpointRwMutex: sync.RWMutex{},
 		remoteRwMutex:        sync.RWMutex{},
+		app:                  app,
 	}, nil
 }
 
@@ -102,21 +104,24 @@ func (tcpTunnel *TCPTunnel) LocalEndpointStatus() TunnelStatus {
 // Run start tcp tunnel
 func (tcpTunnel *TCPTunnel) Run() {
 	tcpTunnel.ctx, tcpTunnel.ctxCancel = context.WithCancel(context.Background())
-	tcpTunnel.wg.Add(1)
-	go tcpTunnel.readFromRemoteWriteToLocal()
-	tcpTunnel.wg.Add(1)
-	go tcpTunnel.readFromLocalWriteToRemote()
+	wgw := new(util.WaitGroupWrapper)
+	wgw.Wrap(func() {
+		tcpTunnel.readFromRemoteWriteToLocal()
+	})
+	wgw.Wrap(func() {
+		tcpTunnel.readFromLocalWriteToRemote()
+	})
+
 	tcpTunnel.SetRemoteStatus(StatusProxying)
 	tcpTunnel.SetLocalEndpointStatus(StatusProxying)
 
-	tcpTunnel.wg.Wait()
+	wgw.WaitGroup.Wait()
 	tcpTunnel.Close(errors.New("OK"))
 }
 
 func (tcpTunnel *TCPTunnel) readFromLocalWriteToRemote() {
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	tcpTunnel.wq.EventRegister(&waitEntry, waiter.EventIn)
-	defer tcpTunnel.wg.Done()
 	defer tcpTunnel.wq.EventUnregister(&waitEntry)
 
 readFromLocal:
@@ -171,7 +176,6 @@ readFromLocal:
 }
 
 func (tcpTunnel *TCPTunnel) readFromRemoteWriteToLocal() {
-	defer tcpTunnel.wg.Done()
 readFromRemote:
 	for {
 		select {
@@ -179,6 +183,7 @@ readFromRemote:
 			break readFromRemote
 		default:
 			buf := make([]byte, BuffSize)
+			tcpTunnel.remoteConn.SetReadDeadline(time.Now().Add(time.Duration(tcpTunnel.app.Cfg.TCP.Timeout) * time.Second))
 			n, err := tcpTunnel.remoteConn.Read(buf)
 			if err != nil {
 				if !util.IsEOF(err) {
@@ -187,6 +192,7 @@ readFromRemote:
 				}
 				break readFromRemote
 			}
+			tcpTunnel.remoteConn.SetReadDeadline(WithoutTimeout)
 
 			if n > 0 && tcpTunnel.RemoteStatus() != StatusClosed {
 				chunk := buf[0:n]

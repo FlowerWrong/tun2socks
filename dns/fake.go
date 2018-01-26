@@ -109,11 +109,11 @@ func (d *DNS) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	}
 
 	// match by domain
-	matched, proxy := d.RulePtr.Proxy(domain)
+	matched, p := d.RulePtr.Proxy(domain)
 
 	// if domain use proxy
-	if matched && proxy != "" {
-		if record := d.DNSTablePtr.Set(domain, proxy); record != nil {
+	if matched && p != "" {
+		if record := d.DNSTablePtr.Set(domain, p); record != nil {
 			// go d.fillRealIP(record, r)
 			return record.Answer(r), nil
 		}
@@ -132,12 +132,12 @@ func (d *DNS) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 			switch answer := item.(type) {
 			case *dns.A:
 				// test ip
-				_, proxy = d.RulePtr.Proxy(answer.A)
+				_, p = d.RulePtr.Proxy(answer.A)
 				break OuterLoop
 			case *dns.CNAME:
 				// test cname
-				matched, proxy = d.RulePtr.Proxy(answer.Target)
-				if matched && proxy != "" {
+				matched, p = d.RulePtr.Proxy(answer.Target)
+				if matched && p != "" {
 					break OuterLoop
 				}
 			default:
@@ -145,10 +145,10 @@ func (d *DNS) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 			}
 		}
 		// if ip use proxy
-		if proxy != "" {
-			if record := d.DNSTablePtr.Set(domain, proxy); record != nil {
+		if p != "" {
+			if record := d.DNSTablePtr.Set(domain, p); record != nil {
 				// record.SetRealIP(msg)
-				log.Println("[dns] --------------------------", domain, "via proxy", proxy, "is a proxy domain config it????")
+				log.Println("[dns] --------------------------", domain, "via proxy", p, "is a proxy domain config it????")
 				return record.Answer(r), nil
 			}
 		} else {
