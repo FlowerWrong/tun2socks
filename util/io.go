@@ -3,6 +3,8 @@ package util
 import (
 	"io"
 	"net"
+	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/FlowerWrong/netstack/tcpip"
@@ -44,7 +46,16 @@ func IsTimeout(err error) bool {
 
 // IsBrokenPipe check this is broken pipe or not
 func IsBrokenPipe(err error) bool {
-	if e, ok := err.(syscall.Errno); ok && e == syscall.EPIPE {
+	if e, ok := err.(*net.OpError); ok && e.Err == syscall.EPIPE {
+		return true
+	}
+
+	if runtime.GOOS == "windows" && strings.Contains(err.Error(), "An established connection was aborted by the software in your host machine") {
+		return true
+	}
+
+	// linux and darwin
+	if strings.Contains(err.Error(), "broken pipe") {
 		return true
 	}
 	return false
