@@ -221,14 +221,14 @@ func NewFakeDNSServer(cfg *configure.AppConfig) (*DNS, error) {
 
 	// don't hijack proxy domain
 	for _, item := range cfg.Proxy {
-		proxy, err := proxy.FromUrl(item.URL)
+		p, err := proxy.FromUrl(item.URL)
 		if err != nil {
 			return nil, err
 		}
-		host := proxy.Url.Host
-		index := strings.IndexByte(proxy.Url.Host, ':')
+		host := p.Url.Host
+		index := strings.IndexByte(p.Url.Host, ':')
 		if index > 0 {
-			host = proxy.Url.Host[:index]
+			host = p.Url.Host[:index]
 		}
 		d.RulePtr.DirectDomain(host)
 	}
