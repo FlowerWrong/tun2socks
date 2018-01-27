@@ -143,49 +143,6 @@ func (c *DNSTable) SetNonProxyDomain(domain string, ttl uint32) {
 	c.nonProxyDomains[domain] = time.Now().Add(time.Duration(ttl) * time.Second)
 }
 
-func (c *DNSTable) ClearExpiredNonProxyDomain(now time.Time) {
-	c.npdLock.Lock()
-	defer c.npdLock.Unlock()
-	for domain, expired := range c.nonProxyDomains {
-		if expired.Before(now) {
-			delete(c.nonProxyDomains, domain)
-			log.Printf("[dns] release non proxy domain: %s", domain)
-		}
-	}
-}
-
-func (c *DNSTable) ClearExpiredDomain(now time.Time) {
-	c.recordsLock.Lock()
-	defer c.recordsLock.Unlock()
-
-	threshold := 1000
-	if threshold > c.ipPool.Capacity()/10 {
-		threshold = c.ipPool.Capacity() / 10
-	}
-
-	if len(c.records) <= threshold {
-		return
-	}
-
-	for domain, record := range c.records {
-		if !record.Expires.Before(now) {
-			continue
-		}
-		delete(c.records, domain)
-		delete(c.ip2Domain, record.IP.String())
-		c.ipPool.Release(record.IP)
-	}
-}
-
-func (c *DNSTable) Serve() error {
-	tick := time.Tick(60 * time.Second)
-	for now := range tick {
-		c.ClearExpiredDomain(now)
-		c.ClearExpiredNonProxyDomain(now)
-	}
-	return nil
-}
-
 func (c *DNSTable) Reload(ip net.IP, subnet *net.IPNet) {
 	log.Println("Dns table hot reloaded")
 	c.npdLock.Lock()

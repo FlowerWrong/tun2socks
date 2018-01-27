@@ -47,7 +47,6 @@ func RunTun2socks(configFile string) {
 	app.QuitTCPNetstack = make(chan bool)
 	app.QuitUDPNetstack = make(chan bool)
 	app.QuitDNS = make(chan bool)
-	app.QuitDNSClear = make(chan bool)
 	app.QuitPprof = make(chan bool)
 	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
 	app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
@@ -66,9 +65,6 @@ func RunTun2socks(configFile string) {
 			app.ServeDNS()
 		})
 		go app.StopDNS()
-		wgw.Wrap(func() {
-			app.ServeClearExpiredDNSTable()
-		})
 	}
 
 	if app.Cfg.Pprof.Enabled {

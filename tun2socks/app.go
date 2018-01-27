@@ -30,32 +30,27 @@ type App struct {
 	QuitTCPNetstack       chan bool
 	QuitUDPNetstack       chan bool
 	QuitDNS               chan bool
-	QuitDNSClear          chan bool
 	QuitPprof             chan bool
 }
 
+// Stop ...
 func (app *App) Stop() {
-	log.Println("send stop to channel")
-	go func() {
-		app.QuitTCPNetstack <- true
+	defer func() {
+		close(app.QuitTCPNetstack)
+		close(app.QuitUDPNetstack)
+		close(app.QuitDNS)
+		close(app.QuitPprof)
 	}()
+	log.Println("send stop to channel")
+	app.QuitTCPNetstack <- true
 	if app.Cfg.UDP.Enabled {
-		go func() {
-			app.QuitUDPNetstack <- true
-		}()
+		app.QuitUDPNetstack <- true
 	}
 	if app.Cfg.DNS.DNSMode == "fake" {
-		go func() {
-			app.QuitDNS <- true
-		}()
-		go func() {
-			app.QuitDNSClear <- true
-		}()
+		app.QuitDNS <- true
 	}
 	if app.Cfg.Pprof.Enabled {
-		go func() {
-			app.QuitPprof <- true
-		}()
+		app.QuitPprof <- true
 	}
 }
 

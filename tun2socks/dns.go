@@ -2,7 +2,6 @@ package tun2socks
 
 import (
 	"log"
-	"time"
 )
 
 // ServeDNS ...
@@ -23,20 +22,4 @@ func (app *App) StopDNS() error {
 		log.Println(err)
 	}
 	return err
-}
-
-// ServeClearExpiredDNSTable ...
-func (app *App) ServeClearExpiredDNSTable() error {
-	tick := time.Tick(60 * time.Second)
-	for now := range tick {
-		select {
-		case <-app.QuitDNSClear:
-			log.Println("quit dns clear task")
-			return nil
-		default:
-			app.FakeDNS.DNSTablePtr.ClearExpiredDomain(now)
-			app.FakeDNS.DNSTablePtr.ClearExpiredNonProxyDomain(now)
-		}
-	}
-	return nil
 }
