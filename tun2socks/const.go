@@ -8,6 +8,13 @@ var DefaultConnectDuration = 1 * time.Second
 // WithoutTimeout no timeout
 var WithoutTimeout = time.Time{}
 
+var (
+	QuitTCPNetstack = make(chan bool)
+	QuitUDPNetstack = make(chan bool)
+	QuitDNS         = make(chan bool)
+	QuitPprof       = make(chan bool)
+)
+
 // TunnelStatus struct
 type TunnelStatus uint
 

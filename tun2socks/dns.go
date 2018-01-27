@@ -15,7 +15,7 @@ func (app *App) ServeDNS() error {
 
 // StopDNS ...
 func (app *App) StopDNS() error {
-	<-app.QuitDNS
+	<-QuitDNS
 	log.Println("quit dns")
 	err := app.FakeDNS.Server.Shutdown()
 	if err != nil {

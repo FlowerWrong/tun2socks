@@ -1,6 +1,7 @@
 package main
 
 import (
+	"C"
 	"flag"
 	"fmt"
 	"log"
@@ -12,8 +13,6 @@ import (
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
 )
-
-var app = new(tun2socks.App)
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -34,21 +33,20 @@ func main() {
 		}
 	}
 	log.Println("[app] config file path is", configFile)
-	RunTun2socks(configFile)
+	StartTun2socks(configFile)
 }
 
-//export StopTun2socks
+//export StopTun2socks FIXME segmentation fault
 func StopTun2socks() {
-	app.Stop()
+	log.Println("stop tun2socks")
+	tun2socks.Stop()
 }
 
-//export RunTun2socks
-func RunTun2socks(configFile string) {
-	app.QuitTCPNetstack = make(chan bool)
-	app.QuitUDPNetstack = make(chan bool)
-	app.QuitDNS = make(chan bool)
-	app.QuitPprof = make(chan bool)
-	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
+//export StartTun2socks
+func StartTun2socks(configFile string) {
+	var app = new(tun2socks.App)
+	app.Config(configFile).NewTun().AddRoutes()
+	// app.Config(configFile).NewTun().AddRoutes().SignalHandler()
 	app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
 
 	wgw := new(util.WaitGroupWrapper)

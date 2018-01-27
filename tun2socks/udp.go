@@ -40,7 +40,7 @@ func (app *App) NewUDPEndpointAndListenIt() error {
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {
 				select {
-				case <-app.QuitUDPNetstack:
+				case <-QuitUDPNetstack:
 					log.Println("quit udp netstack")
 					return nil
 				case <-notifyCh:

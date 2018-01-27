@@ -27,31 +27,21 @@ type App struct {
 	HookPort              uint16
 	Version               float64
 	NetworkProtocolNumber tcpip.NetworkProtocolNumber
-	QuitTCPNetstack       chan bool
-	QuitUDPNetstack       chan bool
-	QuitDNS               chan bool
-	QuitPprof             chan bool
 }
 
 // Stop ...
-func (app *App) Stop() {
+func Stop() {
 	defer func() {
-		close(app.QuitTCPNetstack)
-		close(app.QuitUDPNetstack)
-		close(app.QuitDNS)
-		close(app.QuitPprof)
+		close(QuitTCPNetstack)
+		close(QuitUDPNetstack)
+		close(QuitDNS)
+		close(QuitPprof)
 	}()
 	log.Println("send stop to channel")
-	app.QuitTCPNetstack <- true
-	if app.Cfg.UDP.Enabled {
-		app.QuitUDPNetstack <- true
-	}
-	if app.Cfg.DNS.DNSMode == "fake" {
-		app.QuitDNS <- true
-	}
-	if app.Cfg.Pprof.Enabled {
-		app.QuitPprof <- true
-	}
+	QuitTCPNetstack <- true
+	QuitUDPNetstack <- true
+	QuitDNS <- true
+	QuitPprof <- true
 }
 
 // NewTun create a tun interface
@@ -124,7 +114,7 @@ func (app *App) Exit() {
 	if app.Cfg.DNS.AutoConfigSystemDNS {
 		app.SetAndResetSystemDNSServers(false)
 	}
-	app.Stop()
+	Stop()
 }
 
 // SetAndResetSystemDNSServers ...

@@ -17,7 +17,7 @@ func (app *App) ServePprof() error {
 
 // StopPprof ...
 func (app *App) StopPprof() error {
-	<-app.QuitPprof
+	<-QuitPprof
 	log.Println("quit http pprof")
 	err := app.Pprof.Shutdown(nil)
 	if err != nil {

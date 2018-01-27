@@ -36,7 +36,7 @@ func (app *App) NewTCPEndpointAndListenIt() error {
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {
 				select {
-				case <-app.QuitTCPNetstack:
+				case <-QuitTCPNetstack:
 					log.Println("quit tcp netstack")
 					return nil
 				case <-notifyCh:
