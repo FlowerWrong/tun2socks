@@ -36,7 +36,8 @@ func main() {
 	StartTun2socks(configFile)
 }
 
-//export StopTun2socks FIXME segmentation fault
+// FIXME segmentation fault
+//export StopTun2socks
 func StopTun2socks() {
 	log.Println("stop tun2socks")
 	tun2socks.Stop()
@@ -45,8 +46,8 @@ func StopTun2socks() {
 //export StartTun2socks
 func StartTun2socks(configFile string) {
 	var app = new(tun2socks.App)
-	app.Config(configFile).NewTun().AddRoutes()
-	// app.Config(configFile).NewTun().AddRoutes().SignalHandler()
+	// app.Config(configFile).NewTun().AddRoutes()
+	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
 	app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
 
 	wgw := new(util.WaitGroupWrapper)
