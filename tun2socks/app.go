@@ -26,6 +26,12 @@ type App struct {
 	HookPort              uint16
 	Version               float64
 	NetworkProtocolNumber tcpip.NetworkProtocolNumber
+	QuitAll               chan bool
+	QuitTCPNetstack       chan bool
+	QuitUDPNetstack       chan bool
+	QuitDNS               chan bool
+	QuitDNSClear          chan bool
+	QuitPprof             chan bool
 }
 
 // NewTun create a tun interface

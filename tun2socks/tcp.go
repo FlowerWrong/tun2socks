@@ -32,6 +32,13 @@ func (app *App) NewTCPEndpointAndListenIt() error {
 	defer wq.EventUnregister(&waitEntry)
 
 	for {
+		select {
+		case <-app.QuitTCPNetstack:
+			break
+		default:
+			// Do other stuff
+		}
+
 		endpoint, wq, err := ep.Accept()
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {

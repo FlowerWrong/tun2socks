@@ -30,6 +30,13 @@ func (app *App) NewUDPEndpointAndListenIt() error {
 	defer wq.EventUnregister(&waitEntry)
 
 	for {
+		select {
+		case <-app.QuitTCPNetstack:
+			break
+		default:
+			// Do other stuff
+		}
+
 		var localAddr tcpip.FullAddress
 		v, err := ep.Read(&localAddr)
 		if err != nil {

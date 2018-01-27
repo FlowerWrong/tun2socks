@@ -13,6 +13,8 @@ import (
 	"github.com/FlowerWrong/tun2socks/util"
 )
 
+var app = new(tun2socks.App)
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -35,9 +37,22 @@ func main() {
 	RunTun2socks(configFile)
 }
 
+func StopTun2socks() {
+	app.QuitTCPNetstack <- true
+	app.QuitUDPNetstack <- true
+	app.QuitDNS <- true
+	app.QuitDNSClear <- true
+	app.QuitPprof <- true
+}
+
 //export RunTun2socks
 func RunTun2socks(configFile string) {
-	app := new(tun2socks.App)
+	app.QuitAll = make(chan bool)
+	app.QuitTCPNetstack = make(chan bool)
+	app.QuitUDPNetstack = make(chan bool)
+	app.QuitDNS = make(chan bool)
+	app.QuitDNSClear = make(chan bool)
+	app.QuitPprof = make(chan bool)
 	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
 	app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
 
@@ -56,14 +71,11 @@ func RunTun2socks(configFile string) {
 	}
 	if app.Cfg.DNS.DNSMode == "fake" {
 		wgw.Wrap(func() {
-			if app.Cfg.DNS.AutoConfigSystemDNS {
-				app.SetAndResetSystemDNSServers(true)
-			}
-			app.FakeDNS.Serve()
+			app.ServeDNS()
 		})
 		wgw.Wrap(func() {
 			// clearExpiredNonProxyDomain and clearExpiredDomain
-			app.FakeDNS.DNSTablePtr.Serve()
+			app.ServeClearExpiredDNSTable()
 		})
 	}
 

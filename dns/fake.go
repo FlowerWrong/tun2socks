@@ -20,7 +20,7 @@ var errResolve = errors.New("resolve error")
 
 // DNS struct
 type DNS struct {
-	server      *dns.Server
+	Server      *dns.Server
 	client      *dns.Client
 	nameservers []string
 	RulePtr     *Rule
@@ -184,8 +184,8 @@ func (d *DNS) handler(w dns.ResponseWriter, r *dns.Msg) {
 
 // Serve run a dns server
 func (d *DNS) Serve() error {
-	log.Printf("[dns] listen on %s", d.server.Addr)
-	return d.server.ListenAndServe()
+	log.Printf("[dns] listen on %s", d.Server.Addr)
+	return d.Server.ListenAndServe()
 }
 
 // NewFakeDNSServer create a fake dns srever with config
@@ -209,7 +209,7 @@ func NewFakeDNSServer(cfg *configure.AppConfig) (*DNS, error) {
 	}
 
 	d.nameservers = cfg.DNS.Nameserver
-	d.server = server
+	d.Server = server
 	d.client = client
 
 	var ip, subnet, _ = net.ParseCIDR(cfg.General.Network)

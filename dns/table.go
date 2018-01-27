@@ -143,7 +143,7 @@ func (c *DNSTable) SetNonProxyDomain(domain string, ttl uint32) {
 	c.nonProxyDomains[domain] = time.Now().Add(time.Duration(ttl) * time.Second)
 }
 
-func (c *DNSTable) clearExpiredNonProxyDomain(now time.Time) {
+func (c *DNSTable) ClearExpiredNonProxyDomain(now time.Time) {
 	c.npdLock.Lock()
 	defer c.npdLock.Unlock()
 	for domain, expired := range c.nonProxyDomains {
@@ -154,7 +154,7 @@ func (c *DNSTable) clearExpiredNonProxyDomain(now time.Time) {
 	}
 }
 
-func (c *DNSTable) clearExpiredDomain(now time.Time) {
+func (c *DNSTable) ClearExpiredDomain(now time.Time) {
 	c.recordsLock.Lock()
 	defer c.recordsLock.Unlock()
 
@@ -180,8 +180,8 @@ func (c *DNSTable) clearExpiredDomain(now time.Time) {
 func (c *DNSTable) Serve() error {
 	tick := time.Tick(60 * time.Second)
 	for now := range tick {
-		c.clearExpiredDomain(now)
-		c.clearExpiredNonProxyDomain(now)
+		c.ClearExpiredDomain(now)
+		c.ClearExpiredNonProxyDomain(now)
 	}
 	return nil
 }
