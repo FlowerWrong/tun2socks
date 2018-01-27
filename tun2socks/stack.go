@@ -1,4 +1,4 @@
-package netstack
+package tun2socks
 
 import (
 	"log"
@@ -12,7 +12,7 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
-	"github.com/FlowerWrong/tun2socks/tun2socks"
+	"github.com/FlowerWrong/tun2socks/util"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 )
 
 // NewNetstack create a tcp/ip stack
-func NewNetstack(app *tun2socks.App) tcpip.NetworkProtocolNumber {
+func NewNetstack(app *App) tcpip.NetworkProtocolNumber {
 	tunIP, _, _ := net.ParseCIDR(app.Cfg.General.Network)
 
 	// Parse the IP address. Support both ipv4 and ipv6.
@@ -42,7 +42,7 @@ func NewNetstack(app *tun2socks.App) tcpip.NetworkProtocolNumber {
 	// Create the stack with ip and tcp protocols, then add a tun-based NIC and address.
 	app.S = stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName})
 
-	app.HookPort = NewRandomPort(app.S)
+	app.HookPort = util.NewRandomPort(app.S)
 	if app.HookPort == 0 {
 		log.Fatal("New random port failed")
 	}

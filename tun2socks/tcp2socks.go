@@ -1,4 +1,4 @@
-package tunnel
+package tun2socks
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/waiter"
-	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
 )
 
@@ -28,11 +27,11 @@ type TCPTunnel struct {
 	ctx                  context.Context
 	ctxCancel            context.CancelFunc
 	closeOne             sync.Once // to avoid multi close tunnel
-	app                  *tun2socks.App
+	app                  *App
 }
 
 // NewTCP2Socks create a tcp tunnel
-func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, app *tun2socks.App) (*TCPTunnel, error) {
+func NewTCP2Socks(wq *waiter.Queue, ep tcpip.Endpoint, ip net.IP, port uint16, app *App) (*TCPTunnel, error) {
 	var remoteAddr string
 	proxy := ""
 

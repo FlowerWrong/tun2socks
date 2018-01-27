@@ -1,4 +1,4 @@
-package netstack
+package tun2socks
 
 import (
 	"log"
@@ -7,14 +7,12 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
 	"github.com/FlowerWrong/netstack/waiter"
-	"github.com/FlowerWrong/tun2socks/tun2socks"
-	"github.com/FlowerWrong/tun2socks/tunnel"
 )
 
 // NewTCPEndpointAndListenIt create a TCP endpoint, bind it, then start listening.
-func NewTCPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks.App) {
+func (app *App) NewTCPEndpointAndListenIt() {
 	var wq waiter.Queue
-	ep, err := app.S.NewEndpoint(tcp.ProtocolNumber, proto, &wq)
+	ep, err := app.S.NewEndpoint(tcp.ProtocolNumber, app.NetworkProtocolNumber, &wq)
 	if err != nil {
 		log.Fatal("NewEndpoint failed", err)
 	}
@@ -51,7 +49,7 @@ func NewTCPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 			endpoint.Close()
 			continue
 		}
-		tcpTunnel, e := tunnel.NewTCP2Socks(wq, endpoint, ip, local.Port, app)
+		tcpTunnel, e := NewTCP2Socks(wq, endpoint, ip, local.Port, app)
 		if e != nil {
 			endpoint.Close()
 			continue

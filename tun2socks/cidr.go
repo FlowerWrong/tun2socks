@@ -1,4 +1,4 @@
-package netstack
+package tun2socks
 
 import (
 	"net"

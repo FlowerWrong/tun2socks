@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/FlowerWrong/tun2socks/dns"
@@ -17,13 +18,14 @@ import (
 
 // App struct
 type App struct {
-	FakeDNS  *dns.DNS
-	Cfg      *configure.AppConfig
-	Proxies  *configure.Proxies
-	S        *stack.Stack
-	Ifce     *water.Interface
-	HookPort uint16
-	Version  float64
+	FakeDNS               *dns.DNS
+	Cfg                   *configure.AppConfig
+	Proxies               *configure.Proxies
+	S                     *stack.Stack
+	Ifce                  *water.Interface
+	HookPort              uint16
+	Version               float64
+	NetworkProtocolNumber tcpip.NetworkProtocolNumber
 }
 
 // NewTun create a tun interface

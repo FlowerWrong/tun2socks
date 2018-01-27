@@ -1,4 +1,4 @@
-package netstack
+package tun2socks
 
 import (
 	"log"
@@ -8,15 +8,13 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/netstack/waiter"
-	"github.com/FlowerWrong/tun2socks/tun2socks"
-	"github.com/FlowerWrong/tun2socks/tunnel"
 	"github.com/FlowerWrong/tun2socks/util"
 )
 
 // NewUDPEndpointAndListenIt create a UDP endpoint, bind it, then start read.
-func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks.App) {
+func (app *App) NewUDPEndpointAndListenIt() {
 	var wq waiter.Queue
-	ep, e := app.S.NewEndpoint(udp.ProtocolNumber, proto, &wq)
+	ep, e := app.S.NewEndpoint(udp.ProtocolNumber, app.NetworkProtocolNumber, &wq)
 	if e != nil {
 		log.Fatal("New UDP Endpoint failed", e)
 	}
@@ -58,7 +56,7 @@ func NewUDPEndpointAndListenIt(proto tcpip.NetworkProtocolNumber, app *tun2socks
 			continue
 		}
 
-		udpTunnel, existFlag, e := tunnel.NewUDPTunnel(endpoint, localAddr, app)
+		udpTunnel, existFlag, e := NewUDPTunnel(endpoint, localAddr, app)
 		if e != nil {
 			log.Println("[error] NewUDPTunnel failed", e)
 			udp.UDPNatList.Delete(localAddr.Port)

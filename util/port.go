@@ -1,4 +1,4 @@
-package netstack
+package util
 
 import (
 	"github.com/FlowerWrong/netstack/tcpip"

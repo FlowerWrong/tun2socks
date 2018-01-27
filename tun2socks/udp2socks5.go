@@ -1,4 +1,4 @@
-package tunnel
+package tun2socks
 
 import (
 	"context"
@@ -14,7 +14,6 @@ import (
 	"github.com/FlowerWrong/netstack/tcpip/buffer"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
-	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
 	"github.com/yinghuocho/gosocks"
 )
@@ -36,7 +35,7 @@ type UDPTunnel struct {
 	localAddr            tcpip.FullAddress
 	cmdUDPAssociateReply *gosocks.SocksReply
 	closeOne             sync.Once
-	app                  *tun2socks.App
+	app                  *App
 	wg                   sync.WaitGroup
 	localBufLen          int
 	remoteBufLen         int
@@ -50,7 +49,7 @@ func id(remoteHost string, remotePort uint16, localAddr tcpip.FullAddress) strin
 }
 
 // NewUDPTunnel Create a udp tunnel
-func NewUDPTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, app *tun2socks.App) (*UDPTunnel, bool, error) {
+func NewUDPTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, app *App) (*UDPTunnel, bool, error) {
 	localTCPSocks5Dialer := &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
 		Timeout: DefaultConnectDuration,

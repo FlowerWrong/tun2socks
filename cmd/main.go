@@ -11,8 +11,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/FlowerWrong/netstack/tcpip"
-	"github.com/FlowerWrong/tun2socks/netstack"
 	"github.com/FlowerWrong/tun2socks/tun2socks"
 	"github.com/FlowerWrong/tun2socks/util"
 )
@@ -43,13 +41,11 @@ func main() {
 func RunTun2socks(configFile string) {
 	app := new(tun2socks.App)
 	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
-
-	var proto tcpip.NetworkProtocolNumber
-	proto = netstack.NewNetstack(app)
+	app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
 
 	wgw := new(util.WaitGroupWrapper)
 	wgw.Wrap(func() {
-		netstack.NewTCPEndpointAndListenIt(proto, app)
+		app.NewTCPEndpointAndListenIt()
 	})
 	if app.Cfg.UDP.Enabled {
 		_, err := app.Cfg.UDPProxy()
@@ -57,7 +53,7 @@ func RunTun2socks(configFile string) {
 			log.Fatal("Get udp socks 5 proxy failed", err)
 		}
 		wgw.Wrap(func() {
-			netstack.NewUDPEndpointAndListenIt(proto, app)
+			app.NewUDPEndpointAndListenIt()
 		})
 	}
 	if app.Cfg.DNS.DNSMode == "fake" {
