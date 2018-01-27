@@ -14,6 +14,11 @@ import (
 
 // NewUDPEndpointAndListenIt create a UDP endpoint, bind it, then start read.
 func (app *App) NewUDPEndpointAndListenIt() error {
+	_, err := app.Cfg.UDPProxy()
+	if err != nil {
+		log.Fatal("Get udp socks 5 proxy failed", err)
+	}
+
 	var wq waiter.Queue
 	ep, e := app.S.NewEndpoint(udp.ProtocolNumber, app.NetworkProtocolNumber, &wq)
 	if e != nil {
@@ -30,19 +35,19 @@ func (app *App) NewUDPEndpointAndListenIt() error {
 	defer wq.EventUnregister(&waitEntry)
 
 	for {
-		select {
-		case <-app.QuitTCPNetstack:
-			break
-		default:
-			// Do other stuff
-		}
-
 		var localAddr tcpip.FullAddress
 		v, err := ep.Read(&localAddr)
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {
-				<-notifyCh
-				continue
+				select {
+				case <-app.QuitUDPNetstack:
+					log.Println("quit udp netstack")
+					return nil
+				case <-notifyCh:
+					continue
+				default:
+					continue
+				}
 			}
 			if !util.IsClosed(err) {
 				log.Println("[error] read from netstack failed", err)

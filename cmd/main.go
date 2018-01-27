@@ -37,17 +37,13 @@ func main() {
 	RunTun2socks(configFile)
 }
 
+//export StopTun2socks
 func StopTun2socks() {
-	app.QuitTCPNetstack <- true
-	app.QuitUDPNetstack <- true
-	app.QuitDNS <- true
-	app.QuitDNSClear <- true
-	app.QuitPprof <- true
+	app.Stop()
 }
 
 //export RunTun2socks
 func RunTun2socks(configFile string) {
-	app.QuitAll = make(chan bool)
 	app.QuitTCPNetstack = make(chan bool)
 	app.QuitUDPNetstack = make(chan bool)
 	app.QuitDNS = make(chan bool)
@@ -61,10 +57,6 @@ func RunTun2socks(configFile string) {
 		app.NewTCPEndpointAndListenIt()
 	})
 	if app.Cfg.UDP.Enabled {
-		_, err := app.Cfg.UDPProxy()
-		if err != nil {
-			log.Fatal("Get udp socks 5 proxy failed", err)
-		}
 		wgw.Wrap(func() {
 			app.NewUDPEndpointAndListenIt()
 		})
@@ -73,8 +65,8 @@ func RunTun2socks(configFile string) {
 		wgw.Wrap(func() {
 			app.ServeDNS()
 		})
+		go app.StopDNS()
 		wgw.Wrap(func() {
-			// clearExpiredNonProxyDomain and clearExpiredDomain
 			app.ServeClearExpiredDNSTable()
 		})
 	}
@@ -83,6 +75,7 @@ func RunTun2socks(configFile string) {
 		wgw.Wrap(func() {
 			app.ServePprof()
 		})
+		go app.StopPprof()
 	}
 
 	log.Println(fmt.Sprintf("[app] run tun2socks(%.2f) success", app.Version))

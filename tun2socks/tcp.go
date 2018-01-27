@@ -32,18 +32,18 @@ func (app *App) NewTCPEndpointAndListenIt() error {
 	defer wq.EventUnregister(&waitEntry)
 
 	for {
-		select {
-		case <-app.QuitTCPNetstack:
-			break
-		default:
-			// Do other stuff
-		}
-
 		endpoint, wq, err := ep.Accept()
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {
-				<-notifyCh
-				continue
+				select {
+				case <-app.QuitTCPNetstack:
+					log.Println("quit tcp netstack")
+					return nil
+				case <-notifyCh:
+					continue
+				default:
+					continue
+				}
 			}
 			log.Println("[error] accept failed", err)
 		}
@@ -62,7 +62,6 @@ func (app *App) NewTCPEndpointAndListenIt() error {
 			endpoint.Close()
 			continue
 		}
-
 		go tcpTunnel.Run()
 	}
 }

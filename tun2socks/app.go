@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
+	"net/http"
 	"runtime"
 
 	"github.com/FlowerWrong/netstack/tcpip"
@@ -19,6 +19,7 @@ import (
 // App struct
 type App struct {
 	FakeDNS               *dns.DNS
+	Pprof                 *http.Server
 	Cfg                   *configure.AppConfig
 	Proxies               *configure.Proxies
 	S                     *stack.Stack
@@ -26,12 +27,36 @@ type App struct {
 	HookPort              uint16
 	Version               float64
 	NetworkProtocolNumber tcpip.NetworkProtocolNumber
-	QuitAll               chan bool
 	QuitTCPNetstack       chan bool
 	QuitUDPNetstack       chan bool
 	QuitDNS               chan bool
 	QuitDNSClear          chan bool
 	QuitPprof             chan bool
+}
+
+func (app *App) Stop() {
+	log.Println("send stop to channel")
+	go func() {
+		app.QuitTCPNetstack <- true
+	}()
+	if app.Cfg.UDP.Enabled {
+		go func() {
+			app.QuitUDPNetstack <- true
+		}()
+	}
+	if app.Cfg.DNS.DNSMode == "fake" {
+		go func() {
+			app.QuitDNS <- true
+		}()
+		go func() {
+			app.QuitDNSClear <- true
+		}()
+	}
+	if app.Cfg.Pprof.Enabled {
+		go func() {
+			app.QuitPprof <- true
+		}()
+	}
 }
 
 // NewTun create a tun interface
@@ -104,7 +129,7 @@ func (app *App) Exit() {
 	if app.Cfg.DNS.AutoConfigSystemDNS {
 		app.SetAndResetSystemDNSServers(false)
 	}
-	os.Exit(0)
+	app.Stop()
 }
 
 // SetAndResetSystemDNSServers ...
