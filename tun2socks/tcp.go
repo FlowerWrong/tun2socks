@@ -1,6 +1,7 @@
 package tun2socks
 
 import (
+	"errors"
 	"log"
 	"net"
 
@@ -10,19 +11,19 @@ import (
 )
 
 // NewTCPEndpointAndListenIt create a TCP endpoint, bind it, then start listening.
-func (app *App) NewTCPEndpointAndListenIt() {
+func (app *App) NewTCPEndpointAndListenIt() error {
 	var wq waiter.Queue
 	ep, err := app.S.NewEndpoint(tcp.ProtocolNumber, app.NetworkProtocolNumber, &wq)
 	if err != nil {
-		log.Fatal("NewEndpoint failed", err)
+		return errors.New(err.String())
 	}
 
 	defer ep.Close()
 	if err := ep.Bind(tcpip.FullAddress{NICId, "", app.HookPort}, nil); err != nil {
-		log.Fatal("Bind failed", err)
+		return errors.New(err.String())
 	}
 	if err := ep.Listen(Backlog); err != nil {
-		log.Fatal("Listen failed", err)
+		return errors.New(err.String())
 	}
 
 	// Wait for connections to appear.

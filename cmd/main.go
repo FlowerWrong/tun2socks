@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"time"
@@ -71,9 +69,7 @@ func RunTun2socks(configFile string) {
 
 	if app.Cfg.Pprof.Enabled {
 		wgw.Wrap(func() {
-			pprofAddr := fmt.Sprintf("%s:%d", app.Cfg.Pprof.ProfHost, app.Cfg.Pprof.ProfPort)
-			log.Println("[pprof] Http pprof listen on", pprofAddr, " see", fmt.Sprintf("http://%s/debug/pprof/", pprofAddr))
-			http.ListenAndServe(pprofAddr, nil)
+			app.ServePprof()
 		})
 	}
 

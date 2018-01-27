@@ -1,6 +1,7 @@
 package tun2socks
 
 import (
+	"errors"
 	"log"
 	"net"
 
@@ -12,15 +13,15 @@ import (
 )
 
 // NewUDPEndpointAndListenIt create a UDP endpoint, bind it, then start read.
-func (app *App) NewUDPEndpointAndListenIt() {
+func (app *App) NewUDPEndpointAndListenIt() error {
 	var wq waiter.Queue
 	ep, e := app.S.NewEndpoint(udp.ProtocolNumber, app.NetworkProtocolNumber, &wq)
 	if e != nil {
-		log.Fatal("New UDP Endpoint failed", e)
+		return errors.New(e.String())
 	}
 	defer ep.Close()
 	if err := ep.Bind(tcpip.FullAddress{NICId, "", app.HookPort}, nil); err != nil {
-		log.Fatal("Bind failed", err)
+		return errors.New(e.String())
 	}
 
 	// Wait for connections to appear.
