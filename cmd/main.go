@@ -1,7 +1,7 @@
 package main
 
 import (
-	"C"
+	// "C"
 	"flag"
 	"fmt"
 	"log"

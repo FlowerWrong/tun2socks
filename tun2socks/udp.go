@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net"
+	"time"
 
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
@@ -45,7 +46,7 @@ func (app *App) NewUDPEndpointAndListenIt() error {
 					return nil
 				case <-notifyCh:
 					continue
-				default:
+				case <-time.After(time.Second * 1):
 					continue
 				}
 			}
