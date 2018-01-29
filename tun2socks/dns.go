@@ -17,12 +17,12 @@ func (app *App) ServeDNS() error {
 func (app *App) StopDNS() error {
 	<-QuitDNS
 	log.Println("quit dns")
+	if app.Cfg.DNS.AutoConfigSystemDNS {
+		app.SetAndResetSystemDNSServers(false)
+	}
 	err := app.FakeDNS.Server.Shutdown()
 	if err != nil {
 		log.Println(err)
-	}
-	if app.Cfg.DNS.AutoConfigSystemDNS {
-		app.SetAndResetSystemDNSServers(false)
 	}
 	return err
 }
