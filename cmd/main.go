@@ -61,9 +61,9 @@ func GoStopTun2socks() {
 
 //export GoStartTun2socks
 func GoStartTun2socks(configFile string) {
-	app.Config(configFile).NewTun().AddRoutes()
+	// app.Config(configFile).NewTun().AddRoutes()
 	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
-	// app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
+	app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
 
 	wgw := new(util.WaitGroupWrapper)
 	tun2socks.UseTCPNetstack = true
