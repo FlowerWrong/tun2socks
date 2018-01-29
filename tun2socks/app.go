@@ -37,11 +37,18 @@ func Stop() {
 		close(QuitDNS)
 		close(QuitPprof)
 	}()
-	log.Println("send stop to channel")
-	QuitTCPNetstack <- true
-	QuitUDPNetstack <- true
-	QuitDNS <- true
-	QuitPprof <- true
+	if UseTCPNetstack {
+		QuitTCPNetstack <- true
+	}
+	if UseUDPNetstack {
+		QuitUDPNetstack <- true
+	}
+	if UseDNS {
+		QuitDNS <- true
+	}
+	if UsePprof {
+		QuitPprof <- true
+	}
 }
 
 // NewTun create a tun interface

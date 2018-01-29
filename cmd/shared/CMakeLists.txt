@@ -1,13 +1,19 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 project(tun2socks)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_FLAGS "-std=c99")
 
-include_directories()
+include_directories(${CMAKE_SOURCE_DIR})
 
 set(MAIN_SOURCE_FILES
         main.c
         )
 
 add_executable(tun2socks ${MAIN_SOURCE_FILES})
+target_link_libraries(tun2socks
+        pthread
+        )
+target_link_libraries(tun2socks
+        ${CMAKE_SOURCE_DIR}/libtun2socks.a
+        )

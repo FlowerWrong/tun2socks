@@ -13,6 +13,10 @@ var (
 	QuitUDPNetstack = make(chan bool)
 	QuitDNS         = make(chan bool)
 	QuitPprof       = make(chan bool)
+	UseTCPNetstack  = false
+	UseUDPNetstack  = false
+	UseDNS          = false
+	UsePprof        = false
 )
 
 // TunnelStatus struct

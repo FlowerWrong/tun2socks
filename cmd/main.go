@@ -33,33 +33,35 @@ func main() {
 		}
 	}
 	log.Println("[app] config file path is", configFile)
-	StartTun2socks(configFile)
+	GoStartTun2socks(configFile)
 }
 
-// FIXME segmentation fault
-//export StopTun2socks
-func StopTun2socks() {
+//export GoStopTun2socks
+func GoStopTun2socks() {
 	log.Println("stop tun2socks")
 	tun2socks.Stop()
 }
 
-//export StartTun2socks
-func StartTun2socks(configFile string) {
+//export GoStartTun2socks
+func GoStartTun2socks(configFile string) {
 	var app = new(tun2socks.App)
 	// app.Config(configFile).NewTun().AddRoutes()
 	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
 	app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
 
 	wgw := new(util.WaitGroupWrapper)
+	tun2socks.UseTCPNetstack = true
 	wgw.Wrap(func() {
 		app.NewTCPEndpointAndListenIt()
 	})
 	if app.Cfg.UDP.Enabled {
+		tun2socks.UseUDPNetstack = true
 		wgw.Wrap(func() {
 			app.NewUDPEndpointAndListenIt()
 		})
 	}
 	if app.Cfg.DNS.DNSMode == "fake" {
+		tun2socks.UseDNS = true
 		wgw.Wrap(func() {
 			app.ServeDNS()
 		})
@@ -67,6 +69,7 @@ func StartTun2socks(configFile string) {
 	}
 
 	if app.Cfg.Pprof.Enabled {
+		tun2socks.UsePprof = true
 		wgw.Wrap(func() {
 			app.ServePprof()
 		})
