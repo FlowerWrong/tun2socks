@@ -118,9 +118,6 @@ func (app *App) ReloadConfig() {
 
 // Exit tun2socks
 func (app *App) Exit() {
-	if app.Cfg.DNS.AutoConfigSystemDNS {
-		app.SetAndResetSystemDNSServers(false)
-	}
 	Stop()
 }
 

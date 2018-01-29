@@ -21,5 +21,8 @@ func (app *App) StopDNS() error {
 	if err != nil {
 		log.Println(err)
 	}
+	if app.Cfg.DNS.AutoConfigSystemDNS {
+		app.SetAndResetSystemDNSServers(false)
+	}
 	return err
 }

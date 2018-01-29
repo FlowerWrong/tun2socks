@@ -14,6 +14,8 @@ import (
 	"github.com/FlowerWrong/tun2socks/util"
 )
 
+var app = new(tun2socks.App)
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -36,6 +38,21 @@ func main() {
 	GoStartTun2socks(configFile)
 }
 
+//export GoReloadConfig
+func GoReloadConfig(configFile string) {
+	app.ReloadConfig()
+}
+
+//export GoSetSystemDNSServer
+func GoSetSystemDNSServer() {
+	app.SetAndResetSystemDNSServers(true)
+}
+
+//export GoResetSystemDNSServer
+func GoResetSystemDNSServer() {
+	app.SetAndResetSystemDNSServers(false)
+}
+
 //export GoStopTun2socks
 func GoStopTun2socks() {
 	log.Println("stop tun2socks")
@@ -44,10 +61,9 @@ func GoStopTun2socks() {
 
 //export GoStartTun2socks
 func GoStartTun2socks(configFile string) {
-	var app = new(tun2socks.App)
-	// app.Config(configFile).NewTun().AddRoutes()
+	app.Config(configFile).NewTun().AddRoutes()
 	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
-	app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
+	// app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
 
 	wgw := new(util.WaitGroupWrapper)
 	tun2socks.UseTCPNetstack = true

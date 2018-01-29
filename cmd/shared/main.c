@@ -23,8 +23,11 @@ void *tun2socksThread(void *arg) {
 }
 
 void *uiThread(void *arg) {
+    char *configPath = (char *) arg;
+    GoString configFile = {configPath, (int64_t) strlen(configPath)};
     sleep(20);
-    GoStopTun2socks();
+    // GoStopTun2socks();
+    GoReloadConfig(configFile);
     printf("exit uiThread success\n");
     return ((void *) 0);
 }
@@ -40,7 +43,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if (pthread_create(&uiThreadId, NULL, uiThread, NULL)) {
+    if (pthread_create(&uiThreadId, NULL, uiThread, configPath)) {
         exit(EXIT_FAILURE);
     }
 
