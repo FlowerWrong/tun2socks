@@ -50,8 +50,13 @@ func IsBrokenPipe(err error) bool {
 		return true
 	}
 
-	if runtime.GOOS == "windows" && strings.Contains(err.Error(), "An established connection was aborted by the software in your host machine") {
-		return true
+	if runtime.GOOS == "windows" {
+		if strings.Contains(err.Error(), "An established connection was aborted by the software in your host machine") {
+			return true
+		}
+		if strings.Contains(err.Error(), "An existing connection was forcibly closed by the remote host") {
+			return true
+		}
 	}
 
 	// linux and darwin
