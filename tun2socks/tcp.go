@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"net"
-	"time"
 
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/transport/tcp"
@@ -41,8 +40,6 @@ func (app *App) NewTCPEndpointAndListenIt() error {
 					log.Println("quit tcp netstack")
 					return nil
 				case <-notifyCh:
-					continue
-				case <-time.After(time.Second * 1):
 					continue
 				}
 			}
