@@ -56,7 +56,7 @@ func GoResetSystemDNSServer() {
 //export GoStopTun2socks
 func GoStopTun2socks() {
 	log.Println("stop tun2socks")
-	tun2socks.Stop()
+	app.Exit()
 }
 
 //export GoStartTun2socks
@@ -81,7 +81,6 @@ func GoStartTun2socks(configFile string) {
 		wgw.Wrap(func() {
 			app.ServeDNS()
 		})
-		go app.StopDNS()
 	}
 
 	if app.Cfg.Pprof.Enabled {
@@ -89,7 +88,6 @@ func GoStartTun2socks(configFile string) {
 		wgw.Wrap(func() {
 			app.ServePprof()
 		})
-		go app.StopPprof()
 	}
 
 	log.Println(fmt.Sprintf("[app] run tun2socks(%.2f) success", app.Version))

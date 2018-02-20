@@ -15,7 +15,6 @@ func (app *App) ServeDNS() error {
 
 // StopDNS ...
 func (app *App) StopDNS() error {
-	<-QuitDNS
 	log.Println("quit dns")
 	if app.Cfg.DNS.AutoConfigSystemDNS {
 		app.SetAndResetSystemDNSServers(false)
