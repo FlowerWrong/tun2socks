@@ -29,28 +29,6 @@ type App struct {
 	NetworkProtocolNumber tcpip.NetworkProtocolNumber
 }
 
-// Stop ...
-func Stop() {
-	defer func() {
-		close(QuitTCPNetstack)
-		close(QuitUDPNetstack)
-		close(QuitDNS)
-		close(QuitPprof)
-	}()
-	if UseTCPNetstack {
-		QuitTCPNetstack <- true
-	}
-	if UseUDPNetstack {
-		QuitUDPNetstack <- true
-	}
-	if UseDNS {
-		QuitDNS <- true
-	}
-	if UsePprof {
-		QuitPprof <- true
-	}
-}
-
 // NewTun create a tun interface
 func (app *App) NewTun() *App {
 	NewTun(app)
@@ -118,7 +96,19 @@ func (app *App) ReloadConfig() {
 
 // Exit tun2socks
 func (app *App) Exit() {
-	Stop()
+	if UseTCPNetstack {
+		close(QuitTCPNetstack)
+	}
+	if UseUDPNetstack {
+		close(QuitUDPNetstack)
+	}
+	if UseDNS {
+		go app.StopDNS()
+	}
+	if UsePprof {
+		go app.StopPprof()
+	}
+
 }
 
 // SetAndResetSystemDNSServers ...

@@ -9,10 +9,8 @@ var DefaultConnectDuration = 1 * time.Second
 var WithoutTimeout = time.Time{}
 
 var (
-	QuitTCPNetstack = make(chan bool)
-	QuitUDPNetstack = make(chan bool)
-	QuitDNS         = make(chan bool)
-	QuitPprof       = make(chan bool)
+	QuitTCPNetstack = make(chan struct{})
+	QuitUDPNetstack = make(chan struct{})
 	UseTCPNetstack  = false
 	UseUDPNetstack  = false
 	UseDNS          = false
