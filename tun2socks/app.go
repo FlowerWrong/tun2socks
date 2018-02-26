@@ -30,7 +30,7 @@ type App struct {
 }
 
 // Stop ...
-func Stop() {
+func (app *App) Stop() {
 	defer func() {
 		close(QuitTCPNetstack)
 		close(QuitUDPNetstack)
@@ -114,11 +114,6 @@ func (app *App) ReloadConfig() {
 	app.Proxies.Reload(app.Cfg.Proxy)
 	log.Println("Routes hot reloaded")
 	app.AddRoutes()
-}
-
-// Exit tun2socks
-func (app *App) Exit() {
-	Stop()
 }
 
 // SetAndResetSystemDNSServers ...

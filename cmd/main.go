@@ -56,7 +56,7 @@ func GoResetSystemDNSServer() {
 //export GoStopTun2socks
 func GoStopTun2socks() {
 	log.Println("stop tun2socks")
-	tun2socks.Stop()
+	app.Stop()
 }
 
 //export GoStartTun2socks

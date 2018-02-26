@@ -18,7 +18,7 @@ func (app *App) SignalHandler() *App {
 			switch s {
 			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
 				log.Println("[signal]", s)
-				app.Exit()
+				app.Stop()
 			case syscall.SIGUSR1:
 				log.Println("[signal]", s)
 			case syscall.SIGUSR2:
