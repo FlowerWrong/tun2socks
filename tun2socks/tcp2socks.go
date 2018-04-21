@@ -205,7 +205,7 @@ readFromRemote:
 					}
 					var m uintptr
 					var err *tcpip.Error
-					m, err = tcpTunnel.localEndpoint.Write(chunk, nil)
+					m, err = tcpTunnel.localEndpoint.Write(tcpip.SlicePayload(chunk), tcpip.WriteOptions{})
 					n := int(m)
 					if err != nil {
 						if err == tcpip.ErrWouldBlock {

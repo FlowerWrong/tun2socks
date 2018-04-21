@@ -47,7 +47,18 @@ func NewNetstack(app *App) tcpip.NetworkProtocolNumber {
 		log.Fatal("New random port failed")
 	}
 
-	linkID := fdbased.New(app.Ifce, app.Cfg.General.Mtu, nil)
+	// Parse the mac address.
+	maddr, err := net.ParseMAC("aa:00:01:01:01:01")
+	if err != nil {
+		log.Fatalf("Bad MAC address: aa:00:01:01:01:01")
+	}
+
+	linkID := fdbased.New(app.Ifce, &fdbased.Options{
+		FD:             app.Ifce.Fd(),
+		MTU:            app.Cfg.General.Mtu,
+		EthernetHeader: false,
+		Address:        tcpip.LinkAddress(maddr),
+	})
 	if err := app.S.CreateNIC(NICId, linkID, true, addr, app.HookPort); err != nil {
 		log.Fatal("Create NIC failed", err)
 	}

@@ -45,11 +45,14 @@ func (d *DNS) resolve(r *dns.Msg) (*dns.Msg, error) {
 
 		r, _, err := d.client.Exchange(r, ns)
 		if err != nil {
+			// eg: write: network is down
+			// eg: i/o timeout
 			log.Printf("[dns] resolve %s on %s failed: %v", qname, ns, err)
 			return
 		}
 
 		if r.Rcode == dns.RcodeServerFailure {
+			// eg: code 2
 			log.Printf("[dns] resolve %s on %s failed: code %d", qname, ns, r.Rcode)
 			return
 		}
@@ -122,6 +125,7 @@ func (d *DNS) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	// resolve
 	msg, err := d.resolve(r)
 	if err != nil || len(msg.Answer) == 0 {
+		// dns failed
 		return msg, err
 	}
 
@@ -159,7 +163,6 @@ func (d *DNS) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	// set domain as a non-proxy-domain
 	d.DNSTablePtr.SetNonProxyDomain(domain, msg.Answer[0].Header().Ttl)
 
-	// final
 	return msg, err
 }
 
