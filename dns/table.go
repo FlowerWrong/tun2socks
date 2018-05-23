@@ -93,8 +93,8 @@ func (c *DNSTable) Get(domain string) *DomainRecord {
 	return c.get(domain)
 }
 
-// forge a IPv4 dns reply
-func forgeIPv4Answer(domain string, ip net.IP) *dns.A {
+// ForgeIPv4Answer forge a IPv4 dns reply
+func ForgeIPv4Answer(domain string, ip net.IP) *dns.A {
 	rr := new(dns.A)
 	rr.Hdr = dns.RR_Header{Name: dns.Fqdn(domain), Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: configure.DNSDefaultTTL}
 	rr.A = ip.To4()
@@ -120,7 +120,7 @@ func (c *DNSTable) Set(domain string, proxy string) *DomainRecord {
 	record.IP = ip
 	record.Hostname = domain
 	record.Proxy = proxy
-	record.answer = forgeIPv4Answer(domain, ip)
+	record.answer = ForgeIPv4Answer(domain, ip)
 
 	record.Touch()
 

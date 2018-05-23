@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FlowerWrong/go-hostsfile"
 	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/miekg/dns"
 	"github.com/miekg/dns/dnsutil"
@@ -167,10 +168,21 @@ func (d *DNS) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 }
 
 func (d *DNS) handler(w dns.ResponseWriter, r *dns.Msg) {
+	// /etc/hosts
+	domain := dnsutil.TrimDomainName(r.Question[0].Name, ".")
+	ip, err := hostsfile.Lookup(domain)
+	if err == nil && ip != "" {
+		rsp := new(dns.Msg)
+		rsp.SetReply(r)
+		rsp.RecursionAvailable = true
+		rsp.Answer = append(rsp.Answer, ForgeIPv4Answer(domain, net.ParseIP(ip)))
+		w.WriteMsg(rsp)
+		return
+	}
+
 	isIPv4 := isIPv4Query(r.Question[0])
 
 	var msg *dns.Msg
-	var err error
 
 	if isIPv4 {
 		msg, err = d.doIPv4Query(r)
