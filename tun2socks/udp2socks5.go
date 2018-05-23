@@ -170,7 +170,7 @@ func (udpTunnel *UDPTunnel) Run(v buffer.View, existFlag bool) {
 	}
 	dataLen := len(v)
 	udpTunnel.localBufLen += dataLen
-	if n <= len(v) {
+	if n <= dataLen {
 		log.Println("[error] only part pkt had been write to socks5", n, dataLen)
 		udpTunnel.Close(errors.New("write part error"))
 	}
