@@ -36,7 +36,7 @@ func (app *App) NewUDPEndpointAndListenIt() error {
 
 	for {
 		var localAddr tcpip.FullAddress
-		v, err := ep.Read(&localAddr)
+		v, _, err := ep.Read(&localAddr)
 		if err != nil {
 			if err == tcpip.ErrWouldBlock {
 				select {

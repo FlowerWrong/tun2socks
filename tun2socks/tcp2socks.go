@@ -129,7 +129,7 @@ readFromLocal:
 		case <-tcpTunnel.ctx.Done():
 			break readFromLocal
 		default:
-			v, err := tcpTunnel.localEndpoint.Read(nil)
+			v, _, err := tcpTunnel.localEndpoint.Read(nil)
 			if err != nil {
 				if err == tcpip.ErrWouldBlock {
 					select {
