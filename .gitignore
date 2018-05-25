@@ -3,3 +3,5 @@ config.ini
 .DS_Store
 
 .idea/
+
+.vagrant/
