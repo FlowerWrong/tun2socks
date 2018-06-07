@@ -10,7 +10,9 @@ go get ./...
 
 cp config.example.ini config.ini
 # edit it for free
-sudo go run cmd/main.go --config=config.ini
+sudo go run cmd/main.go -h
+sudo go run cmd/main.go -v
+sudo go run cmd/main.go -c=config.ini
 ```
 
 ## Support operating system.

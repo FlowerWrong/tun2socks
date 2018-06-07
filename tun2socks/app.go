@@ -73,7 +73,6 @@ func (app *App) AddRoutes() *App {
 
 // Config parse config from file
 func (app *App) Config(configFile string) *App {
-	app.Version = 0.5
 	// parse config
 	app.Cfg = new(configure.AppConfig)
 	err := app.Cfg.Parse(configFile)
