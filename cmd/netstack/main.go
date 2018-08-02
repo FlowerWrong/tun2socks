@@ -101,7 +101,7 @@ func main() {
 
 	// Create the stack with ip and tcp protocols, then add a tun-based
 	// NIC and address.
-	s := stack.New(&tcpip.StdClock{}, []string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName})
+	s := stack.New([]string{ipv4.ProtocolName, ipv6.ProtocolName}, []string{tcp.ProtocolName}, stack.Options{})
 
 	var mtu uint32 = 1500
 
