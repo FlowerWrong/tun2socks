@@ -39,7 +39,7 @@ type DNSConfig struct {
 	DNSPacketSize       uint16   `gcfg:"dns-packet-size"`
 	DNSReadTimeout      uint     `gcfg:"dns-read-timeout"`
 	DNSWriteTimeout     uint     `gcfg:"dns-write-timeout"`
-	AutoConfigSystemDNS bool     `gcfg:"uto-config-system-dns"`
+	AutoConfigSystemDNS bool     `gcfg:"auto-config-system-dns"`
 	Nameserver          []string // backend dns
 	OriginNameserver    string
 }
