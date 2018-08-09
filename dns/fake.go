@@ -14,7 +14,7 @@ import (
 	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/miekg/dns"
 	"github.com/miekg/dns/dnsutil"
-	"github.com/xjdrew/proxy"
+	"github.com/FlowerWrong/proxy"
 )
 
 var errResolve = errors.New("resolve error")

@@ -6,7 +6,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/xjdrew/proxy"
+	"github.com/FlowerWrong/proxy"
 )
 
 var errNoProxy = errors.New("no proxy")

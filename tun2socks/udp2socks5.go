@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FlowerWrong/gosocks"
 	"github.com/FlowerWrong/netstack/tcpip"
 	"github.com/FlowerWrong/netstack/tcpip/buffer"
 	"github.com/FlowerWrong/netstack/tcpip/stack"
 	"github.com/FlowerWrong/netstack/tcpip/transport/udp"
 	"github.com/FlowerWrong/tun2socks/util"
-	"github.com/yinghuocho/gosocks"
 )
 
 // UDPTunnelList id -> *UDPTunnel
