@@ -64,7 +64,7 @@ func (d *DNS) resolve(r *dns.Msg) (*dns.Msg, error) {
 		}
 	}
 
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
 	for _, ns := range d.nameservers {

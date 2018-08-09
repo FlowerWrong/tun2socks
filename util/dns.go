@@ -8,8 +8,8 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-// CreateDNSResponse with dns data, pack with udp, and ip header.
-func CreateDNSResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint16, pkt []byte) []byte {
+// CreateUDPResponse with dns data, pack with udp, and ip header.
+func CreateUDPResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint16, pkt []byte) []byte {
 	ip := &layers.IPv4{
 		SrcIP:    SrcIP,
 		DstIP:    DstIP,

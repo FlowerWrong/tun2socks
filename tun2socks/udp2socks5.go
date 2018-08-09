@@ -206,7 +206,8 @@ readFromRemote:
 				}
 				udpTunnel.remoteBufLen += len(udpReq.Data)
 				remoteHost := udpTunnel.localEndpoint.LocalAddress.To4().String()
-				pkt := util.CreateDNSResponse(net.ParseIP(remoteHost), udpTunnel.remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, udpReq.Data)
+
+				pkt := util.CreateUDPResponse(net.ParseIP(remoteHost), udpTunnel.remotePort, net.ParseIP(udpTunnel.localAddr.Addr.To4().String()), udpTunnel.localAddr.Port, udpReq.Data)
 				if pkt == nil {
 					udpTunnel.Close(errors.New("pack ip packet return nil"))
 					break readFromRemote
@@ -223,6 +224,12 @@ readFromRemote:
 						break readFromRemote
 					}
 				}
+
+				// DNS packet
+				if udpTunnel.remotePort == 53 {
+					udpTunnel.Close(errors.New("OK"))
+					break readFromRemote
+				}
 			}
 			if err != nil {
 				if !util.IsEOF(err) && !util.IsTimeout(err) {
@@ -238,6 +245,7 @@ readFromRemote:
 // Close this udp tunnel
 func (udpTunnel *UDPTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
+		log.Println("udp tunnel closed reason:", reason.Error())
 		UDPTunnelList.Delete(udpTunnel.id)
 		udpTunnel.ctxCancel()
 		udpTunnel.socks5TcpConn.Close()
