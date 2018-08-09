@@ -115,7 +115,7 @@ func (tcpTunnel *TCPTunnel) Run() {
 	tcpTunnel.SetLocalEndpointStatus(StatusProxying)
 
 	wgw.WaitGroup.Wait()
-	tcpTunnel.Close(errors.New("OK"))
+	tcpTunnel.Close(nil)
 }
 
 func (tcpTunnel *TCPTunnel) readFromLocalWriteToRemote() {
@@ -236,6 +236,9 @@ readFromRemote:
 // Close this tcp tunnel
 func (tcpTunnel *TCPTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
+		if reason != nil {
+			log.Println("tcp tunnel closed reason:", reason.Error())
+		}
 		tcpTunnel.SetLocalEndpointStatus(StatusClosed)
 		tcpTunnel.SetRemoteStatus(StatusClosed)
 

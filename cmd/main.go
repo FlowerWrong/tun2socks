@@ -94,6 +94,8 @@ func GoStartTun2socks(configFile string) {
 		})
 	}
 	if app.Cfg.DNS.DNSMode == "fake" {
+		go app.FakeDNS.DNSTablePtr.Serve()
+
 		tun2socks.UseDNS = true
 		wgw.Wrap(func() {
 			app.ServeDNS()

@@ -181,7 +181,7 @@ func (udpTunnel *UDPTunnel) Run(v buffer.View, existFlag bool) {
 		go udpTunnel.readFromRemoteWriteToLocal()
 
 		udpTunnel.wg.Wait()
-		udpTunnel.Close(errors.New("OK"))
+		udpTunnel.Close(nil)
 	}
 }
 
@@ -227,7 +227,7 @@ readFromRemote:
 
 				// DNS packet
 				if udpTunnel.remotePort == 53 {
-					udpTunnel.Close(errors.New("OK"))
+					udpTunnel.Close(nil)
 					break readFromRemote
 				}
 			}
@@ -245,7 +245,9 @@ readFromRemote:
 // Close this udp tunnel
 func (udpTunnel *UDPTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		log.Println("udp tunnel closed reason:", reason.Error())
+		if reason != nil {
+			log.Println("udp tunnel closed reason:", reason.Error())
+		}
 		UDPTunnelList.Delete(udpTunnel.id)
 		udpTunnel.ctxCancel()
 		udpTunnel.socks5TcpConn.Close()
