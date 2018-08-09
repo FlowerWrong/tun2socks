@@ -50,7 +50,8 @@ func id(remoteHost string, remotePort uint16, localAddr tcpip.FullAddress) strin
 
 // NewUDPTunnel Create a udp tunnel
 func NewUDPTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddress, app *App) (*UDPTunnel, bool, error) {
-	localTCPSocks5Dialer := &gosocks.SocksDialer{
+	var localTCPSocks5Dialer *gosocks.SocksDialer
+	localTCPSocks5Dialer = &gosocks.SocksDialer{
 		Auth:    &gosocks.AnonymousClientAuthenticator{},
 		Timeout: DefaultConnectDuration,
 	}
@@ -66,7 +67,7 @@ func NewUDPTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 			if record.Proxy == "block" {
 				return nil, false, errors.New(record.Hostname + " is blocked")
 			}
-			proxy = app.Cfg.GetProxy(record.Proxy)
+			proxy = app.Cfg.GetProxySchema(record.Proxy)
 			remoteHost = record.Hostname // domain
 			hostType = gosocks.SocksDomainHost
 		}
@@ -79,7 +80,7 @@ func NewUDPTunnel(endpoint stack.TransportEndpointID, localAddr tcpip.FullAddres
 	}
 
 	if proxy == "" {
-		proxy, _ = app.Cfg.UDPProxy()
+		proxy, _ = app.Cfg.UDPProxySchema()
 	}
 
 	socks5TcpConn, err := localTCPSocks5Dialer.Dial(proxy)

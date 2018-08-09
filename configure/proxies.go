@@ -30,7 +30,7 @@ func (p *Proxies) Dial(proxy string, addr string) (net.Conn, error) {
 	return nil, fmt.Errorf("invalid proxy: %s", proxy)
 }
 
-// DefaultDial of proxyies
+// DefaultDial of proxies
 func (p *Proxies) DefaultDial(addr string) (net.Conn, error) {
 	dialer := p.proxies[p.Default]
 	if dialer == nil {
@@ -48,7 +48,7 @@ func (p *Proxies) Reload(config map[string]*ProxyConfig) error {
 func (p *Proxies) setUp(config map[string]*ProxyConfig) error {
 	proxies := make(map[string]*proxy.Proxy)
 	for name, item := range config {
-		proxy, err := proxy.FromUrl(item.URL)
+		setupProxy, err := proxy.FromUrl(item.URL)
 		if err != nil {
 			return err
 		}
@@ -56,14 +56,14 @@ func (p *Proxies) setUp(config map[string]*ProxyConfig) error {
 		if item.Default || p.Default == "" {
 			p.Default = name
 		}
-		proxies[name] = proxy
+		proxies[name] = setupProxy
 	}
 	p.proxies = proxies
 	log.Printf("[proxies] default proxy: %q", p.Default)
 	return nil
 }
 
-// NewProxies crate a new proxyies
+// NewProxies crate a new proxies
 func NewProxies(config map[string]*ProxyConfig) (*Proxies, error) {
 	p := &Proxies{}
 	err := p.setUp(config)
