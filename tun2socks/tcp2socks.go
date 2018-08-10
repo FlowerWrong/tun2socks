@@ -236,7 +236,9 @@ readFromRemote:
 // Close this tcp tunnel
 func (tcpTunnel *TCPTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
-		if reason != nil {
+		if e, ok := reason.(net.Error); ok && e.Timeout() {
+			// This was a timeout
+		} else if reason != nil {
 			log.Println("tcp tunnel closed reason:", reason.Error())
 		}
 		tcpTunnel.SetLocalEndpointStatus(StatusClosed)

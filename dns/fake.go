@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/FlowerWrong/go-hostsfile"
+	"github.com/FlowerWrong/proxy"
 	"github.com/FlowerWrong/tun2socks/configure"
 	"github.com/miekg/dns"
 	"github.com/miekg/dns/dnsutil"
-	"github.com/FlowerWrong/proxy"
 )
 
 var errResolve = errors.New("resolve error")
@@ -46,9 +46,11 @@ func (d *DNS) resolve(r *dns.Msg) (*dns.Msg, error) {
 
 		r, _, err := d.client.Exchange(r, ns)
 		if err != nil {
-			// eg: write: network is down
-			// eg: i/o timeout
-			log.Printf("[dns] resolve %s on %s failed: %v", qname, ns, err)
+			if e, ok := err.(net.Error); ok && e.Timeout() {
+				// This was a timeout
+			} else {
+				log.Printf("[dns] resolve %s on %s failed: %v", qname, ns, err)
+			}
 			return
 		}
 

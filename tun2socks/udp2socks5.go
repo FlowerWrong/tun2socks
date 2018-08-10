@@ -245,7 +245,9 @@ readFromRemote:
 // Close this udp tunnel
 func (udpTunnel *UDPTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		if reason != nil {
+		if e, ok := reason.(net.Error); ok && e.Timeout() {
+			// This was a timeout
+		} else if reason != nil {
 			log.Println("udp tunnel closed reason:", reason.Error())
 		}
 		UDPTunnelList.Delete(udpTunnel.id)
