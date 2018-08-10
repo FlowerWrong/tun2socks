@@ -130,6 +130,10 @@ func main() {
 	check(err)
 	defer out.Close()
 
+	writeToFile(out, domainDirect, "direct-website-domain", "DOMAIN-SUFFIX")
+	writeToFile(out, domainProxy, "proxy-website-domain", "DOMAIN-SUFFIX")
+	writeToFile(out, domainReject, "reject-website-domain", "DOMAIN-SUFFIX")
+
 	writeToFile(out, domainSuffixDirect, "direct-website-suffix", "DOMAIN-SUFFIX")
 	writeToFile(out, domainSuffixProxy, "proxy-website-suffix", "DOMAIN-SUFFIX")
 	writeToFile(out, domainSuffixReject, "reject-website-suffix", "DOMAIN-SUFFIX")
@@ -137,10 +141,6 @@ func main() {
 	writeToFile(out, domainKeywordDirect, "direct-website-keyword", "DOMAIN-KEYWORD")
 	writeToFile(out, domainKeywordProxy, "proxy-website-keyword", "DOMAIN-KEYWORD")
 	writeToFile(out, domainKeywordReject, "reject-website-keyword", "DOMAIN-KEYWORD")
-
-	writeToFile(out, domainDirect, "direct-website-domain", "DOMAIN-SUFFIX")
-	writeToFile(out, domainProxy, "proxy-website-domain", "DOMAIN-SUFFIX")
-	writeToFile(out, domainReject, "reject-website-domain", "DOMAIN-SUFFIX")
 
 	writeToFile(out, ipCidrDirect, "direct-website-ipcidr", "IP-CIDR")
 	writeToFile(out, ipCidrProxy, "proxy-website-ipcidr", "IP-CIDR")
@@ -152,15 +152,15 @@ func main() {
 
 	writeAndCheck(out, "# rules define the order of checking pattern")
 	writeAndCheck(out, "[rule]")
+	writeAndCheck(out, "pattern = direct-website-domain")
+	writeAndCheck(out, "pattern = proxy-website-domain")
+	writeAndCheck(out, "pattern = reject-website-domain")
 	writeAndCheck(out, "pattern = direct-website-suffix")
 	writeAndCheck(out, "pattern = proxy-website-suffix")
 	writeAndCheck(out, "pattern = reject-website-suffix")
 	writeAndCheck(out, "pattern = direct-website-keyword")
 	writeAndCheck(out, "pattern = proxy-website-keyword")
 	writeAndCheck(out, "pattern = reject-website-keyword")
-	writeAndCheck(out, "pattern = direct-website-domain")
-	writeAndCheck(out, "pattern = proxy-website-domain")
-	writeAndCheck(out, "pattern = reject-website-domain")
 	writeAndCheck(out, "pattern = direct-website-ipcidr")
 	writeAndCheck(out, "pattern = proxy-website-ipcidr")
 	writeAndCheck(out, "pattern = reject-website-ipcidr")
