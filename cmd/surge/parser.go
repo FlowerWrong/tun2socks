@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 	"time"
-	)
+)
 
 // Reading files requires checking most calls for errors.
 // This helper will streamline our error checks below.
@@ -150,7 +150,6 @@ func main() {
 	writeToFile(out, geoipProxy, "proxy-website-geoip", "IP-COUNTRY")
 	writeToFile(out, geoipReject, "reject-website-geoip", "IP-COUNTRY")
 
-
 	writeAndCheck(out, "# rules define the order of checking pattern")
 	writeAndCheck(out, "[rule]")
 	writeAndCheck(out, "pattern = direct-website-suffix")
@@ -184,13 +183,13 @@ func writeAndCheck(f *os.File, content string) {
 }
 
 func writeToFile(f *os.File, rules []string, pattern, scheme string) {
-	writeAndCheck(f, "[pattern \"" + pattern + "\"]")
+	writeAndCheck(f, "[pattern \""+pattern+"\"]")
 	if strings.HasPrefix(pattern, "reject") {
 		writeAndCheck(f, "proxy = block")
 	} else if strings.HasPrefix(pattern, "proxy") {
 		writeAndCheck(f, "proxy = B")
 	}
-	writeAndCheck(f, "scheme = " + scheme)
+	writeAndCheck(f, "scheme = "+scheme)
 	for _, host := range rules {
 		_, err := f.WriteString("v = " + host + "\n")
 		check(err)
