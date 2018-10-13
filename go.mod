@@ -9,14 +9,17 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.7.0
 	github.com/google/gopacket v1.1.15
+	github.com/google/netstack v0.0.0-20181011222135-fff2dd31906a // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/miekg/dns v1.0.13
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/songgao/water v0.0.0-20180420064739-bf1a5d02778f // indirect
 	github.com/stretchr/testify v1.2.2
 	github.com/yl2chen/cidranger v0.0.0-20180214081945-928b519e5268
 	golang.org/x/crypto v0.0.0-20181012144002-a92615f3c490 // indirect
 	golang.org/x/net v0.0.0-20181011144130-49bb7cea24b1 // indirect
+	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f // indirect
 	golang.org/x/sys v0.0.0-20181011152604-fa43e7bc11ba // indirect
 	gopkg.in/gcfg.v1 v1.2.3
 	gopkg.in/warnings.v0 v0.1.2 // indirect
