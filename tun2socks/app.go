@@ -31,23 +31,17 @@ type App struct {
 
 // Stop ...
 func (app *App) Stop() {
-	defer func() {
-		close(QuitTCPNetstack)
-		close(QuitUDPNetstack)
-		close(QuitDNS)
-		close(QuitPprof)
-	}()
 	if UseTCPNetstack {
-		QuitTCPNetstack <- true
+		close(QuitTCPNetstack)
 	}
 	if UseUDPNetstack {
-		QuitUDPNetstack <- true
+		close(QuitUDPNetstack)
 	}
 	if UseDNS {
-		QuitDNS <- true
+		close(QuitDNS)
 	}
 	if UsePprof {
-		QuitPprof <- true
+		close(QuitPprof)
 	}
 }
 
@@ -225,10 +219,17 @@ function flushCache {
 updateDNS l
 `
 	} else {
-		shell += `
+		if runtime.GOOS == "darwin" {
+			shell += `
+updateDNS d
+flushCache
+`
+		} else if runtime.GOOS == "linux" {
+			shell += `
 updateDNS a
 flushCache
 `
+		}
 	}
 	util.ExecShell(shell)
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "C"
 	"flag"
 	"fmt"
 	"log"
@@ -52,32 +51,10 @@ func main() {
 		}
 	}
 	log.Println("[app] config file path is", configFile)
-	GoStartTun2socks(configFile)
+	startTun2socks(configFile)
 }
 
-//export GoReloadConfig
-func GoReloadConfig(configFile string) {
-	app.ReloadConfig()
-}
-
-//export GoSetSystemDNSServer
-func GoSetSystemDNSServer() {
-	app.SetAndResetSystemDNSServers(true)
-}
-
-//export GoResetSystemDNSServer
-func GoResetSystemDNSServer() {
-	app.SetAndResetSystemDNSServers(false)
-}
-
-//export GoStopTun2socks
-func GoStopTun2socks() {
-	log.Println("stop tun2socks")
-	app.Stop()
-}
-
-//export GoStartTun2socks
-func GoStartTun2socks(configFile string) {
+func startTun2socks(configFile string) {
 	// app.Config(configFile).NewTun().AddRoutes()
 	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
 	app.NetworkProtocolNumber = tun2socks.NewNetstack(app)

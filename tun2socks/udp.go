@@ -35,6 +35,13 @@ func (app *App) NewUDPEndpointAndListenIt() error {
 	defer wq.EventUnregister(&waitEntry)
 
 	for {
+		select {
+		case <-QuitUDPNetstack:
+			log.Println("quit udp netstack")
+			return nil
+		default:
+		}
+
 		var localAddr tcpip.FullAddress
 		v, _, err := ep.Read(&localAddr)
 		if err != nil {
