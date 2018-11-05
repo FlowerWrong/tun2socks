@@ -155,11 +155,7 @@ readFromLocal:
 					}
 					n, err := tcpTunnel.remoteConn.Write(v)
 					if err != nil {
-						if util.IsEOF(err) {
-							break writeAllPacket
-						}
-
-						if util.IsBrokenPipe(err) {
+						if util.IsBrokenPipe(err) || util.IsEOF(err) {
 							tcpTunnel.Close(nil)
 						} else {
 							tcpTunnel.Close(err)
@@ -190,12 +186,7 @@ readFromRemote:
 			tcpTunnel.remoteConn.SetReadDeadline(time.Now().Add(time.Duration(tcpTunnel.app.Cfg.TCP.Timeout) * time.Second))
 			n, err := tcpTunnel.remoteConn.Read(buf)
 			if err != nil {
-				// TODO 需要一种通知机制，保证继续读取数据，但又不是马上继续读，需要先一直阻塞，知道通知到来
-				if util.IsEOF(err) {
-					break readFromRemote
-				}
-
-				if !util.IsTimeout(err) && !util.IsConnectionReset(err) {
+				if !util.IsTimeout(err) && !util.IsConnectionReset(err) && !util.IsEOF(err) {
 					tcpTunnel.Close(err)
 				} else {
 					tcpTunnel.Close(nil)
