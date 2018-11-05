@@ -139,9 +139,10 @@ readFromLocal:
 						continue readFromLocal
 					}
 				}
-				if !util.IsClosed(err) {
-					log.Println("[error] read from local failed", err, tcpTunnel.remoteAddr)
-					tcpTunnel.Close(errors.New("read from local failed" + err.String()))
+				if util.IsClosed(err) {
+					tcpTunnel.Close(nil)
+				} else {
+					tcpTunnel.Close(errors.New("read from local failed, " + err.String()))
 				}
 				break readFromLocal
 			}
@@ -154,10 +155,13 @@ readFromLocal:
 					}
 					n, err := tcpTunnel.remoteConn.Write(v)
 					if err != nil {
-						if !util.IsEOF(err) {
-							if !util.IsBrokenPipe(err) {
-								log.Println("[error] write packet to remote failed", err, tcpTunnel.remoteAddr)
-							}
+						if util.IsEOF(err) {
+							break writeAllPacket
+						}
+
+						if util.IsBrokenPipe(err) {
+							tcpTunnel.Close(nil)
+						} else {
 							tcpTunnel.Close(err)
 						}
 						break readFromLocal
@@ -186,12 +190,14 @@ readFromRemote:
 			tcpTunnel.remoteConn.SetReadDeadline(time.Now().Add(time.Duration(tcpTunnel.app.Cfg.TCP.Timeout) * time.Second))
 			n, err := tcpTunnel.remoteConn.Read(buf)
 			if err != nil {
-				if !util.IsEOF(err) {
-					if !util.IsTimeout(err) {
-						log.Println("[error] read from remote failed", err, tcpTunnel.remoteAddr)
-					}
-					tcpTunnel.Close(err)
+				if util.IsEOF(err) {
+					continue readFromRemote
 				}
+
+				if !util.IsTimeout(err) {
+					log.Println("[error] read from remote failed", err, tcpTunnel.remoteAddr)
+				}
+				tcpTunnel.Close(err)
 				break readFromRemote
 			}
 			tcpTunnel.remoteConn.SetReadDeadline(WithoutTimeout)
@@ -214,8 +220,9 @@ readFromRemote:
 								continue writeAllPacket
 							}
 						}
-						if !util.IsClosed(err) {
-							log.Println("[error] write to local failed", err, tcpTunnel.remoteAddr)
+						if util.IsClosed(err) {
+							tcpTunnel.Close(nil)
+						} else {
 							tcpTunnel.Close(errors.New(err.String()))
 						}
 						break readFromRemote
@@ -236,10 +243,12 @@ readFromRemote:
 // Close this tcp tunnel
 func (tcpTunnel *TCPTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
-		if e, ok := reason.(net.Error); ok && e.Timeout() {
-			// This was a timeout
-		} else if reason != nil {
-			log.Println("tcp tunnel closed reason:", reason.Error())
+		if reason != nil {
+			if e, ok := reason.(net.Error); ok && e.Timeout() {
+				// This was a timeout
+			} else {
+				log.Println("tcp tunnel closed reason:", reason.Error(), tcpTunnel.remoteAddr)
+			}
 		}
 		tcpTunnel.SetLocalEndpointStatus(StatusClosed)
 		tcpTunnel.SetRemoteStatus(StatusClosed)

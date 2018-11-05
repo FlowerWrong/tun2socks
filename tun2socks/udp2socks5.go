@@ -164,16 +164,15 @@ func (udpTunnel *UDPTunnel) Run(v buffer.View, existFlag bool) {
 
 	n, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
 	if err != nil {
-		if !util.IsEOF(err) {
-			log.Println("[error] write to UDP tunnel failed", err)
-			udpTunnel.Close(err)
-		}
+		udpTunnel.Close(err)
+		return
 	}
 	dataLen := len(v)
 	udpTunnel.localBufLen += dataLen
 	if n <= dataLen {
 		log.Println("[error] only part pkt had been write to socks5", n, dataLen)
 		udpTunnel.Close(errors.New("write part error"))
+		return
 	}
 
 	if !existFlag {
@@ -200,7 +199,6 @@ readFromRemote:
 			if n > 0 {
 				udpReq, err := gosocks.ParseUDPRequest(udpSocks5Buf[0:n])
 				if err != nil {
-					log.Println("[error] parse UDP reply data frailed", err)
 					udpTunnel.Close(err)
 					break readFromRemote
 				}
@@ -219,7 +217,6 @@ readFromRemote:
 						break readFromRemote
 					}
 					if n < len(pkt) {
-						log.Println("[error] write udp package to tun failed", n, "<", len(pkt))
 						udpTunnel.Close(errors.New("write udp package to tun failed, just write success part of pkt"))
 						break readFromRemote
 					}
@@ -234,8 +231,10 @@ readFromRemote:
 			if err != nil {
 				if !util.IsEOF(err) && !util.IsTimeout(err) {
 					log.Println("[error] ReadFromUDP tunnel failed", err, udpTunnel.id)
+					udpTunnel.Close(err)
+				} else {
+					udpTunnel.Close(nil)
 				}
-				udpTunnel.Close(err)
 				break readFromRemote
 			}
 		}
@@ -245,11 +244,15 @@ readFromRemote:
 // Close this udp tunnel
 func (udpTunnel *UDPTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-		if e, ok := reason.(net.Error); ok && e.Timeout() {
-			// This was a timeout
-		} else if reason != nil {
-			log.Println("udp tunnel closed reason:", reason.Error())
+
+		if reason != nil {
+			if e, ok := reason.(net.Error); ok && e.Timeout() {
+				// This was a timeout
+			} else {
+				log.Println("udp tunnel closed reason:", reason.Error())
+			}
 		}
+
 		UDPTunnelList.Delete(udpTunnel.id)
 		udpTunnel.ctxCancel()
 		udpTunnel.socks5TcpConn.Close()
