@@ -194,7 +194,7 @@ readFromRemote:
 					continue readFromRemote
 				}
 
-				if !util.IsTimeout(err) {
+				if !util.IsTimeout(err) && !util.IsConnectionReset(err) {
 					log.Println("[error] read from remote failed", err, tcpTunnel.remoteAddr)
 				}
 				tcpTunnel.Close(err)
