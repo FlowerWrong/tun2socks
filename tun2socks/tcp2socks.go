@@ -190,14 +190,16 @@ readFromRemote:
 			tcpTunnel.remoteConn.SetReadDeadline(time.Now().Add(time.Duration(tcpTunnel.app.Cfg.TCP.Timeout) * time.Second))
 			n, err := tcpTunnel.remoteConn.Read(buf)
 			if err != nil {
+				// TODO 需要一种通知机制，保证继续读取数据，但又不是马上继续读，需要先一直阻塞，知道通知到来
 				if util.IsEOF(err) {
-					continue readFromRemote
+					break readFromRemote
 				}
 
 				if !util.IsTimeout(err) && !util.IsConnectionReset(err) {
-					log.Println("[error] read from remote failed", err, tcpTunnel.remoteAddr)
+					tcpTunnel.Close(err)
+				} else {
+					tcpTunnel.Close(nil)
 				}
-				tcpTunnel.Close(err)
 				break readFromRemote
 			}
 			tcpTunnel.remoteConn.SetReadDeadline(WithoutTimeout)
