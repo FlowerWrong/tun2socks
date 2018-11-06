@@ -141,7 +141,6 @@ readFromLocal:
 				}
 				if err == tcpip.ErrClosedForSend || err == tcpip.ErrClosedForReceive {
 					// do nothing
-					log.Println(err, tcpTunnel.remoteAddr)
 				} else if util.IsClosed(err) {
 					tcpTunnel.Close(nil)
 				} else {
@@ -221,7 +220,6 @@ readFromRemote:
 						}
 						if err == tcpip.ErrClosedForSend || err == tcpip.ErrClosedForReceive {
 							// do nothing
-							log.Println(err, tcpTunnel.remoteAddr)
 						} else if util.IsClosed(err) {
 							tcpTunnel.Close(nil)
 						} else {
