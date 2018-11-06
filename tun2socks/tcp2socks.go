@@ -139,9 +139,13 @@ readFromLocal:
 						continue readFromLocal
 					}
 				}
-				if util.IsClosed(err) {
+				if err == tcpip.ErrClosedForSend || err == tcpip.ErrClosedForReceive {
+					// do nothing
+					log.Println(err, tcpTunnel.remoteAddr)
+				} else if util.IsClosed(err) {
 					tcpTunnel.Close(nil)
 				} else {
+					log.Println(err)
 					tcpTunnel.Close(errors.New("read from local failed, " + err.String()))
 				}
 				break readFromLocal
@@ -158,6 +162,7 @@ readFromLocal:
 						if util.IsBrokenPipe(err) || util.IsEOF(err) {
 							tcpTunnel.Close(nil)
 						} else {
+							log.Println(err)
 							tcpTunnel.Close(err)
 						}
 						break readFromLocal
@@ -187,6 +192,7 @@ readFromRemote:
 			n, err := tcpTunnel.remoteConn.Read(buf)
 			if err != nil {
 				if !util.IsTimeout(err) && !util.IsConnectionReset(err) && !util.IsEOF(err) {
+					log.Println(err)
 					tcpTunnel.Close(err)
 				} else {
 					tcpTunnel.Close(nil)
@@ -213,9 +219,13 @@ readFromRemote:
 								continue writeAllPacket
 							}
 						}
-						if util.IsClosed(err) {
+						if err == tcpip.ErrClosedForSend || err == tcpip.ErrClosedForReceive {
+							// do nothing
+							log.Println(err, tcpTunnel.remoteAddr)
+						} else if util.IsClosed(err) {
 							tcpTunnel.Close(nil)
 						} else {
+							log.Println(err)
 							tcpTunnel.Close(errors.New(err.String()))
 						}
 						break readFromRemote
@@ -237,11 +247,9 @@ readFromRemote:
 func (tcpTunnel *TCPTunnel) Close(reason error) {
 	tcpTunnel.closeOne.Do(func() {
 		if reason != nil {
-			if e, ok := reason.(net.Error); ok && e.Timeout() {
-				// This was a timeout
-			} else {
-				log.Println("tcp tunnel closed reason:", reason.Error(), tcpTunnel.remoteAddr)
-			}
+			local, _ := tcpTunnel.localEndpoint.GetLocalAddress()
+			ip := net.ParseIP(local.Addr.To4().String())
+			log.Println("tcp tunnel closed reason:", reason.Error(), tcpTunnel.remoteAddr, fmt.Sprintf("%v:%d", ip, local.Port), tcpTunnel.remoteConn.LocalAddr(), tcpTunnel.remoteConn.RemoteAddr())
 		}
 		tcpTunnel.SetLocalEndpointStatus(StatusClosed)
 		tcpTunnel.SetRemoteStatus(StatusClosed)

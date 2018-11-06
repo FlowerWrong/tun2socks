@@ -164,6 +164,7 @@ func (udpTunnel *UDPTunnel) Run(v buffer.View, existFlag bool) {
 
 	n, err := udpTunnel.socks5UdpListen.WriteTo(gosocks.PackUDPRequest(req), gosocks.SocksAddrToNetAddr("udp", udpTunnel.cmdUDPAssociateReply.BndHost, udpTunnel.cmdUDPAssociateReply.BndPort).(*net.UDPAddr))
 	if err != nil {
+		log.Println(err)
 		udpTunnel.Close(err)
 		return
 	}
@@ -230,10 +231,9 @@ readFromRemote:
 			}
 			if err != nil {
 				if !util.IsEOF(err) && !util.IsTimeout(err) {
-					log.Println("[error] ReadFromUDP tunnel failed", err, udpTunnel.id)
 					udpTunnel.Close(err)
 				} else {
-					udpTunnel.Close(nil)
+					udpTunnel.Close(err)
 				}
 				break readFromRemote
 			}
@@ -244,13 +244,8 @@ readFromRemote:
 // Close this udp tunnel
 func (udpTunnel *UDPTunnel) Close(reason error) {
 	udpTunnel.closeOne.Do(func() {
-
 		if reason != nil {
-			if e, ok := reason.(net.Error); ok && e.Timeout() {
-				// This was a timeout
-			} else {
-				log.Println("udp tunnel closed reason:", reason.Error())
-			}
+			log.Println("udp tunnel closed reason:", reason.Error(), udpTunnel.id)
 		}
 
 		UDPTunnelList.Delete(udpTunnel.id)
