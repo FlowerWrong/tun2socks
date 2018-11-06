@@ -233,7 +233,7 @@ readFromRemote:
 				if !util.IsEOF(err) && !util.IsTimeout(err) {
 					udpTunnel.Close(err)
 				} else {
-					udpTunnel.Close(err)
+					udpTunnel.Close(nil)
 				}
 				break readFromRemote
 			}
