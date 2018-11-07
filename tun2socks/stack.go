@@ -71,7 +71,7 @@ func NewNetstack(app *App) tcpip.NetworkProtocolNumber {
 	app.S.SetRouteTable([]tcpip.Route{
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", len(addr))),
-			Mask:        tcpip.Address(strings.Repeat("\x00", len(addr))),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", len(addr))),
 			Gateway:     "",
 			NIC:         NICId,
 		},
