@@ -22,7 +22,7 @@ import (
 	"github.com/FlowerWrong/water"
 )
 
-// sudo go run cmd/netstack/main.go tun2 10.0.0.2 8090
+// sudo go run cmd/netstack/main.go utun1 10.0.0.2 8090
 // telnet 10.0.0.2 8090
 
 func echo(wq *waiter.Queue, ep tcpip.Endpoint) {
@@ -155,7 +155,7 @@ func main() {
 	s.SetRouteTable([]tcpip.Route{
 		{
 			Destination: tcpip.Address(strings.Repeat("\x00", len(addr))),
-			Mask:        tcpip.Address(strings.Repeat("\x00", len(addr))),
+			Mask:        tcpip.AddressMask(strings.Repeat("\x00", len(addr))),
 			Gateway:     "",
 			NIC:         1,
 		},
