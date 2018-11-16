@@ -22,9 +22,7 @@ import (
 	"github.com/FlowerWrong/water"
 )
 
-// sudo go run cmd/netstack/main.go utun1 10.0.0.2 8090
-// telnet 10.0.0.2 8090
-
+// echo service
 func echo(wq *waiter.Queue, ep tcpip.Endpoint) {
 	defer ep.Close()
 
@@ -49,13 +47,15 @@ func echo(wq *waiter.Queue, ep tcpip.Endpoint) {
 	}
 }
 
+// exec shell
 func execCommand(name, sargs string) error {
 	args := strings.Split(sargs, " ")
 	cmd := exec.Command(name, args...)
-	log.Println("exec command: %s %s", name, sargs)
+	log.Printf("exec command: %s %s\n", name, sargs)
 	return cmd.Run()
 }
 
+// add route table
 func addRoute(tun string, subnet *net.IPNet) error {
 	ip := subnet.IP
 	maskIP := net.IP(subnet.Mask)
@@ -63,6 +63,8 @@ func addRoute(tun string, subnet *net.IPNet) error {
 	return execCommand("route", sargs)
 }
 
+// sudo go run cmd/netstack/main.go utun1 10.0.0.2 8090
+// telnet 10.0.0.2 8090
 func main() {
 	if len(os.Args) != 4 {
 		log.Fatal("Usage: ", os.Args[0], " <tun-device> <local-address> <local-port>")
@@ -115,13 +117,13 @@ func main() {
 
 	if runtime.GOOS == "darwin" {
 		sargs := fmt.Sprintf("%s 10.0.0.1 10.0.0.2 mtu %d netmask 255.255.255.0 up", ifce.Name(), mtu)
-		if err := execCommand("/sbin/ifconfig", sargs); err != nil {
+		if err = execCommand("/sbin/ifconfig", sargs); err != nil {
 			log.Println(err)
 			return
 		}
 	} else if runtime.GOOS == "linux" {
 		sargs := fmt.Sprintf("%s 10.0.0.1 netmask 255.255.255.0", ifce.Name())
-		if err := execCommand("/sbin/ifconfig", sargs); err != nil {
+		if err = execCommand("/sbin/ifconfig", sargs); err != nil {
 			log.Println(err)
 			return
 		}
