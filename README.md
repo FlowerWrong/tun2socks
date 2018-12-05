@@ -19,7 +19,7 @@ sudo go run cmd/main.go -c=config.ini
 
 * [x] macOS
 * [x] linux
-* [x] Windows Vista and above support with [tap-windows6](https://github.com/OpenVPN/tap-windows6), [download link](https://openvpn.net/index.php/open-source/downloads.html)
+* [x] Windows Vista and above support with [tap-windows6](https://github.com/OpenVPN/tap-windows6), [download link](http://build.openvpn.net/downloads/releases/latest/)
 * [x] Raspberry Pi support
 * [x] android support with root
 
