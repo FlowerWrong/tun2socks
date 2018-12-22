@@ -130,14 +130,18 @@ func main() {
 	check(err)
 	defer out.Close()
 
+	writeAndCheck(out, "# generate from surge.conf")
+	writeAndCheck(out, "# see https://github.com/FlowerWrong/tun2socks/blob/master/cmd/smart/parser.go")
+	writeAndCheck(out, "")
+
 	writeAndCheck(out, "session_name smart")
 	writeAndCheck(out, "welcome_info 欢迎使用smart!")
 	writeAndCheck(out, "debug true")
 	writeAndCheck(out, "")
 
 	writeAndCheck(out, "ip 172.25.0.1")
-	writeAndCheck(out, "dns 223.5.5.5")
-	writeAndCheck(out, "dns 223.6.6.6")
+	writeAndCheck(out, "# dns 223.5.5.5")
+	writeAndCheck(out, "# dns 223.6.6.6")
 	writeAndCheck(out, "dns_ttl 60")
 	writeAndCheck(out, "route 0.0.0.0/0")
 	writeAndCheck(out, "mtu 1500")
@@ -173,7 +177,6 @@ func main() {
 	writeToFile(out, ipCidrProxy, "proxy_ip_cidr")
 	writeToFile(out, ipCidrDirect, "direct_ip_cidr")
 	writeToFile(out, ipCidrReject, "block_ip_cidr")
-	writeAndCheck(out, "")
 
 	os.Exit(0)
 }
