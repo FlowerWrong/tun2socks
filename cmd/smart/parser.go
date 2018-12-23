@@ -140,8 +140,8 @@ func main() {
 	writeAndCheck(out, "")
 
 	writeAndCheck(out, "ip 172.25.0.1")
-	writeAndCheck(out, "# dns 223.5.5.5")
-	writeAndCheck(out, "# dns 223.6.6.6")
+	writeAndCheck(out, "dns 223.5.5.5")
+	writeAndCheck(out, "dns 223.6.6.6")
 	writeAndCheck(out, "dns_ttl 60")
 	writeAndCheck(out, "route 0.0.0.0/0")
 	writeAndCheck(out, "mtu 1500")
@@ -177,6 +177,12 @@ func main() {
 	writeToFile(out, ipCidrProxy, "proxy_ip_cidr")
 	writeToFile(out, ipCidrDirect, "direct_ip_cidr")
 	writeToFile(out, ipCidrReject, "block_ip_cidr")
+	writeAndCheck(out, "")
+
+	writeAndCheck(out, "# process rule")
+	writeToFile(out, []string{"com.android.email", "com.android.browser", "com.android.chrome", "com.android.vending", "org.fdroid.fdroid", "com.tradingview.tradingviewapp", "com.twitter.android"}, "proxy_process")
+	writeToFile(out, []string{}, "direct_process")
+	writeToFile(out, []string{"com.android.thememanager", "com.miui.virtualsim", "com.miui.video", "com.miui.player", "com.xiaomi.gamecenter"}, "block_process")
 
 	os.Exit(0)
 }
