@@ -143,11 +143,16 @@ func main() {
 	writeAndCheck(out, "dns 223.5.5.5")
 	writeAndCheck(out, "dns 223.6.6.6")
 	writeAndCheck(out, "dns_ttl 60")
+	writeAndCheck(out, "route 8.8.8.8/32")
+	writeAndCheck(out, "route 4.4.4.4/32")
+	writeAndCheck(out, "route 1.1.1.1/32")
 	writeAndCheck(out, "route 0.0.0.0/0")
 	writeAndCheck(out, "mtu 1500")
 	writeAndCheck(out, "")
 
 	writeAndCheck(out, "## rules with action, there are 3 actions, proxy, direct and block.")
+	writeAndCheck(out, "final proxy")
+	writeAndCheck(out, "")
 
 	writeAndCheck(out, "# domain rule")
 	writeToFile(out, domainProxy, "proxy_domain")
@@ -180,9 +185,9 @@ func main() {
 	writeAndCheck(out, "")
 
 	writeAndCheck(out, "# process rule")
-	writeToFile(out, []string{"com.android.email", "com.android.browser", "com.android.chrome", "com.android.vending", "org.fdroid.fdroid", "com.tradingview.tradingviewapp", "com.twitter.android"}, "proxy_process")
+	writeToFile(out, []string{}, "proxy_process")
 	writeToFile(out, []string{}, "direct_process")
-	writeToFile(out, []string{"com.android.thememanager", "com.miui.virtualsim", "com.miui.video", "com.miui.player", "com.xiaomi.gamecenter"}, "block_process")
+	writeToFile(out, []string{"com.android.thememanager", "com.miui.virtualsim", "com.miui.video", "com.miui.player", "com.xiaomi.gamecenter", "com.mfashiongallery.emag", "com.miui.systemAdSolution", "com.miui.yellowpage"}, "block_process")
 
 	os.Exit(0)
 }
