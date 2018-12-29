@@ -55,7 +55,6 @@ func main() {
 }
 
 func startTun2socks(configFile string) {
-	// app.Config(configFile).NewTun().AddRoutes()
 	app.Config(configFile).NewTun().AddRoutes().SignalHandler()
 	app.NetworkProtocolNumber = tun2socks.NewNetstack(app)
 
