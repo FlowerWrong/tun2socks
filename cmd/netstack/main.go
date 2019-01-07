@@ -138,9 +138,9 @@ func main() {
 		log.Fatalf("Bad MAC address: aa:00:01:01:01:01")
 	}
 
-	linkID := fdbased.New(ifce, &fdbased.Options{
+	linkID := fdbased.New(&fdbased.Options{
 		FD:             ifce.Fd(),
-		MTU:            1500,
+		MTU:            mtu,
 		EthernetHeader: false,
 		Address:        tcpip.LinkAddress(maddr),
 	})

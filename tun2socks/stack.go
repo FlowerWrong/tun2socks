@@ -53,7 +53,7 @@ func NewNetstack(app *App) tcpip.NetworkProtocolNumber {
 		log.Fatalf("Bad MAC address: aa:00:01:01:01:01")
 	}
 
-	linkID := fdbased.New(app.Ifce, &fdbased.Options{
+	linkID := fdbased.New(&fdbased.Options{
 		FD:             app.Ifce.Fd(),
 		MTU:            app.Cfg.General.Mtu,
 		EthernetHeader: false,
