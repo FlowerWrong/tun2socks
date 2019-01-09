@@ -125,7 +125,7 @@ func (cfg *AppConfig) Parse(filename string) error {
 
 	// set backend dns default value
 	if len(cfg.DNS.Nameserver) == 0 {
-		cfg.DNS.Nameserver = append(cfg.DNS.Nameserver, "114.114.114.114:53")
+		cfg.DNS.Nameserver = append(cfg.DNS.Nameserver, "119.29.29.29:53")
 		cfg.DNS.Nameserver = append(cfg.DNS.Nameserver, "223.5.5.5:53")
 		cfg.DNS.Nameserver = append(cfg.DNS.Nameserver, "8.8.8.8:53")
 	}
