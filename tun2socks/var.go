@@ -37,3 +37,5 @@ const BuffSize = 1500
 
 // PktChannelSize is default packet recv and send buffer size
 const PktChannelSize = BuffSize * 4
+
+const FakeMode = "fake"
