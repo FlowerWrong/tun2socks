@@ -8,7 +8,7 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-// CreateUDPResponse with dns data, pack with udp, and ip header.
+// CreateUDPResponse pack ip udp package, for tun device
 func CreateUDPResponse(SrcIP net.IP, SrcPort uint16, DstIP net.IP, DstPort uint16, pkt []byte) []byte {
 	ip := &layers.IPv4{
 		SrcIP:    SrcIP,
