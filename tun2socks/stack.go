@@ -58,6 +58,7 @@ func NewNetstack(app *App) tcpip.NetworkProtocolNumber {
 		MTU:            app.Cfg.General.Mtu,
 		EthernetHeader: false,
 		Address:        tcpip.LinkAddress(maddr),
+		UseRecvMMsg:    false,
 	})
 	if err := app.S.CreateNIC(NICId, linkID, true, addr, app.HookPort); err != nil {
 		log.Fatal("Create NIC failed", err)
