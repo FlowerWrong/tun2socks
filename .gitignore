@@ -5,3 +5,6 @@ config.ini
 .idea/
 
 .vagrant/
+
+*.log
+tun2socks_*
