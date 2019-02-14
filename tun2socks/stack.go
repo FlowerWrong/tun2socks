@@ -54,11 +54,11 @@ func NewNetstack(app *App) tcpip.NetworkProtocolNumber {
 	}
 
 	linkID := fdbased.New(&fdbased.Options{
-		FD:             app.Ifce.Fd(),
-		MTU:            app.Cfg.General.Mtu,
-		EthernetHeader: false,
-		Address:        tcpip.LinkAddress(maddr),
-		UseRecvMMsg:    false,
+		FD:                 app.Ifce.Fd(),
+		MTU:                app.Cfg.General.Mtu,
+		EthernetHeader:     false,
+		Address:            tcpip.LinkAddress(maddr),
+		PacketDispatchMode: fdbased.Readv,
 	})
 	if err := app.S.CreateNIC(NICId, linkID, true, addr, app.HookPort); err != nil {
 		log.Fatal("Create NIC failed", err)
