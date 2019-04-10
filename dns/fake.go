@@ -103,6 +103,7 @@ func (d *DNS) fillRealIP(record *DomainRecord, r *dns.Msg) {
 
 func (d *DNS) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	domain := dnsutil.TrimDomainName(r.Question[0].Name, ".")
+	domain = strings.ToLower(domain)
 	// if is a non-proxy-domain
 	if d.DNSTablePtr.IsNonProxyDomain(domain) {
 		return d.resolve(r)
@@ -172,6 +173,7 @@ func (d *DNS) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 func (d *DNS) handler(w dns.ResponseWriter, r *dns.Msg) {
 	// /etc/hosts
 	domain := dnsutil.TrimDomainName(r.Question[0].Name, ".")
+	domain = strings.ToLower(domain)
 	ip, err := hostsfile.Lookup(domain)
 	if err == nil && ip != "" {
 		rsp := new(dns.Msg)
