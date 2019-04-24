@@ -3,7 +3,7 @@
 ## How to use it? [more](https://github.com/FlowerWrong/tun2socks/wiki)
 
 ```
-# install golang 1.9+, because of sync.Map
+# install golang 1.10+, because of sync.Map
 go get -u -v github.com/FlowerWrong/tun2socks
 cd tun2socks
 go get ./...
